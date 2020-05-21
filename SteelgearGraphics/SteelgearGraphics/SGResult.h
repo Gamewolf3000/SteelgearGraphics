@@ -2,7 +2,7 @@
 
 namespace SG
 {
-	enum class SGError
+	enum class SGResult
 	{
 		OK
 	};
