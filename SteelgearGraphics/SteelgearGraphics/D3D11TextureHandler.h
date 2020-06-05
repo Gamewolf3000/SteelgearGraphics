@@ -14,8 +14,14 @@ namespace SG
 	enum class TextureType
 	{
 		TEXTURE_1D,
+		TEXTURE_ARRAY_1D,
 		TEXTURE_2D,
-		TEXTURE_3D
+		TEXTURE_ARRAY_2D,
+		TEXTURE_MULTISAMPLED_2D,
+		TEXTURE_ARRAY_MULTISAMPLED_2D,
+		TEXTURE_3D,
+		TEXTURE_CUBE,
+		TEXTURE_ARRAY_CUBE
 
 	};
 
@@ -60,6 +66,11 @@ namespace SG
 		SGResult CreateGlobalTexture3D(const SGGuid& guid, const SGTextureData& generalSettings, UINT width, UINT height, UINT depth);
 
 
+		SGResult CreateSRV(const SGGraphicalEntityID& entity, const SGGuid& entityGuid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT MostDetailedMip, UINT MipLevels);
+		SGResult CreateGlobalSRV(const SGGuid& textureGuid, DXGI_FORMAT format, UINT MostDetailedMip, UINT MipLevels);
+
+		SGResult CreateSRVTextureArray(const SGGraphicalEntityID& entity, const SGGuid& entityGuid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT MostDetailedMip, UINT MipLevels, UINT firstArraySlice, UINT arraySize);
+		SGResult CreateGlobalSRVTextureArray(const SGGuid& textureGuid, DXGI_FORMAT format, UINT MostDetailedMip, UINT MipLevels, UINT firstArraySlice, UINT arraySize);
 
 
 	private:
