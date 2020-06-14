@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SGGraphicsPipeline.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SGGuid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -43,6 +40,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="D3D11SamplerHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11ShaderHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SGGraphicsPipelineHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

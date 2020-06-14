@@ -57,6 +57,7 @@ namespace SG
 		struct D3D11BufferData
 		{
 			BufferType type;
+			//uint count = -1; // needed for keeping count of vertex/index count?
 			bool updated = false;
 			ID3D11Buffer* buffer = nullptr;
 			void* UpdatedData[3] = { nullptr, nullptr, nullptr };

@@ -154,12 +154,13 @@
     <ClInclude Include="D3D11BufferHandler.h" />
     <ClInclude Include="D3D11CommonTypes.h" />
     <ClInclude Include="D3D11SamplerHandler.h" />
+    <ClInclude Include="D3D11ShaderHandler.h" />
     <ClInclude Include="D3D11TextureHandler.h" />
     <ClInclude Include="SGResult.h" />
     <ClInclude Include="SGGraphicalEntity.h" />
     <ClInclude Include="SGGuid.h" />
     <ClInclude Include="D3D11RenderEngine.h" />
-    <ClInclude Include="SGGraphicsPipeline.h" />
+    <ClInclude Include="SGGraphicsPipelineHandler.h" />
     <ClInclude Include="SGRenderEngine.h" />
   </ItemGroup>
   <ItemGroup>
