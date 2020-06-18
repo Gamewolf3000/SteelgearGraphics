@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="D3D11BufferHandler.h" />
     <ClInclude Include="D3D11CommonTypes.h" />
+    <ClInclude Include="D3D11StateHandler.h" />
     <ClInclude Include="D3D11SamplerHandler.h" />
     <ClInclude Include="D3D11ShaderHandler.h" />
     <ClInclude Include="D3D11TextureHandler.h" />

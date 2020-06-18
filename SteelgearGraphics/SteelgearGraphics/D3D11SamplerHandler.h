@@ -62,18 +62,6 @@ namespace SG
 		MIRROR_ONCE
 	};
 
-	enum class ComparisonFunction
-	{
-		NEVER,
-		LESS,
-		EQUAL,
-		LESS_EQUAL,
-		GREATER,
-		NOT_EQUAL,
-		GREATER_EQUAL,
-		ALWAYS
-	};
-
 	class D3D11SamplerHandler
 	{
 	public:

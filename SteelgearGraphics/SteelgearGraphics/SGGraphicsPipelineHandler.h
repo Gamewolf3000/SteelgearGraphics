@@ -46,6 +46,7 @@ namespace SG
 		Association association;
 		SGGuid inputAssembly;
 		std::vector<ShaderResource> vertexBuffers;
+		std::vector<ShaderResource> indexBuffers;
 		RenderShader vertexShader;
 		RenderShader hullShader;
 		RenderShader domainShader;
@@ -53,7 +54,8 @@ namespace SG
 		RenderShader pixelShader;
 		std::vector<ShaderResource> uavs;
 		std::vector<SGGuid> rtvs;
-		std::vector<SGGuid> dsvs;
+		SGGuid dsv;
+		SGGuid blendState;
 		DrawType drawType;
 	};
 
