@@ -42,13 +42,19 @@
     <ClInclude Include="D3D11SamplerHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D3D11ShaderHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SGGraphicsPipelineHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="D3D11StateHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11DrawDataHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11ShaderManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SGGraphicsHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -11,12 +11,12 @@
 
 namespace SG
 {
-	class D3D11ShaderHandler
+	class D3D11ShaderManager
 	{
 	public:
 
-		D3D11ShaderHandler(ID3D11Device* device);
-		~D3D11ShaderHandler();
+		D3D11ShaderManager(ID3D11Device* device);
+		~D3D11ShaderManager();
 
 		SGResult CreateVertexShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
 		SGResult CreateHullShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);

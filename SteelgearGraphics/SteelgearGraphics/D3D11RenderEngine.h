@@ -6,6 +6,12 @@
 #include "SGRenderEngine.h"
 
 #include "D3D11BufferHandler.h"
+#include "D3D11DrawDataHandler.h"
+#include "D3D11SamplerHandler.h"
+#include "D3D11ShaderManager.h"
+#include "D3D11StateHandler.h"
+#include "D3D11TextureHandler.h"
+#include "SGGraphicsPipelineHandler.h"
 
 namespace SG
 {
@@ -22,5 +28,11 @@ namespace SG
 		std::vector<ID3D11DeviceContext> defferedContexts;
 
 		D3D11BufferHandler* bufferHandler;
+		D3D11DrawDataHandler* drawDataHandler;
+		D3D11SamplerHandler* samplerHandler;
+		D3D11ShaderManager* shaderManager;
+		D3D11StateHandler* stateHandler;
+		D3D11TextureHandler* textureHandler;
+		SGGraphicsPipelineHandler pipelineHandler;
 	};
 }

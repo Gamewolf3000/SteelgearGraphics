@@ -1,19 +1,15 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <vector>
-#include <unordered_map>
 
-#include "SGResult.h"
-#include "SGRenderEngine.h"
-#include "SGGuid.h"
+#include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
 
 
 namespace SG
 {
-	class D3D11BufferHandler
+	class D3D11BufferHandler : public SGGraphicsHandler
 	{
 	public:
 
@@ -39,7 +35,7 @@ namespace SG
 		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, UINT firstElement, UINT numberOfElements);
 
 
-
+		void UpdateBuffer(const SGGuid& guid, UpdateStrategy updateStrategy, void* data, size_t byteSize, UINT subresource = 0);
 
 
 	private:
@@ -54,21 +50,31 @@ namespace SG
 			INDIRECT_ARGS_BUFFER
 		};
 
+		struct VertexBufferData
+		{
+			UINT nrOfVertices;
+		};
+
+		struct IndexBufferData
+		{
+			UINT nrOfIndices;
+		};
+
 		struct D3D11BufferData
 		{
 			BufferType type;
-			//uint count = -1; // needed for keeping count of vertex/index count?
 			bool updated = false;
+			union
+			{
+				VertexBufferData vb;
+				IndexBufferData ib;
+			} specificData;
 			ID3D11Buffer* buffer = nullptr;
-			void* UpdatedData[3] = { nullptr, nullptr, nullptr };
+			std::pair<ResourceData, UpdateStrategy> UpdatedData[3];
 		};
-
-
 
 		std::unordered_map<SGGuid, D3D11BufferData> buffers;
 		std::unordered_map<SGGuid, D3D11ResourceViewData> views;
-
-		std::vector<std::unordered_map<SGGuid, SGGuid>> entityData; // the entity leads to a position in the vector, and the guid is used to retrieve the guid of the actual buffer/view
 
 		ID3D11Device* device;
 

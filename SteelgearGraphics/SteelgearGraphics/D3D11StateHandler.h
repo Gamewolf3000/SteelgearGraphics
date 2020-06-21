@@ -1,12 +1,8 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <vector>
-#include <unordered_map>
 
-#include "SGResult.h"
-#include "SGRenderEngine.h"
-#include "SGGuid.h"
+#include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
 
@@ -74,7 +70,7 @@ namespace SG
 		MAX
 	};
 
-	class D3D11StateHandler
+	class D3D11StateHandler : public SGGraphicsHandler
 	{
 	public:
 
@@ -92,6 +88,7 @@ namespace SG
 		SGResult CreateDepthStencilState(const SGGuid& guid, BOOL blendEnable, Blend srcBlend, Blend destBlend, BlendOp blendOp,
 			Blend srcBlendAlpha, Blend destBlendAlpha, BlendOp blendOpAlpha, UINT8 renderTargetWriteMask);
 
+		SGResult CreateViewport(const SGGuid& guid, FLOAT topLeftX, FLOAT topLeftY, FLOAT width, FLOAT height, FLOAT minDepth, FLOAT maxDepth);
 
 	private:
 
@@ -106,11 +103,13 @@ namespace SG
 
 		};
 
+		struct D3D11ViewportData
+		{
+			D3D11_VIEWPORT viewport;
+		};
 
-
-		std::unordered_map<SGGuid, D3D11StateData> stageData;
-
-		std::vector<std::unordered_map<SGGuid, SGGuid>> entityData; // the entity leads to a position in the vector, and the guid is used to retrieve the guid of the actual state
+		std::unordered_map<SGGuid, D3D11StateData> states;
+		std::unordered_map<SGGuid, D3D11ViewportData> viewports;
 
 		ID3D11Device* device;
 

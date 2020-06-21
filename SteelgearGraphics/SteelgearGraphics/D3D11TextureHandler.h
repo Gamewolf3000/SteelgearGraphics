@@ -1,12 +1,8 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <vector>
-#include <unordered_map>
 
-#include "SGResult.h"
-#include "SGRenderEngine.h"
-#include "SGGuid.h"
+#include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
 
@@ -37,7 +33,7 @@ namespace SG
 		UINT rowsPerSlice;
 	};
 
-	class D3D11TextureHandler
+	class D3D11TextureHandler : public SGGraphicsHandler
 	{
 	public:
 
@@ -62,7 +58,6 @@ namespace SG
 		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
 
-
 	private:
 		enum class TextureType
 		{
@@ -75,7 +70,6 @@ namespace SG
 			TEXTURE_3D,
 			TEXTURE_CUBE,
 			TEXTURE_ARRAY_CUBE
-
 		};
 
 		struct D3D11TextureData
@@ -88,14 +82,12 @@ namespace SG
 				ID3D11Texture2D* texture2D;
 				ID3D11Texture3D* texture3D;
 			} texture;
-			void* UpdatedData[3] = { nullptr, nullptr, nullptr };
+			std::pair<ResourceData, UpdateStrategy> UpdatedData[3];
 		};
 
 
 		std::unordered_map<SGGuid, D3D11TextureData> textures;
 		std::unordered_map<SGGuid, D3D11ResourceViewData> views;
-
-		std::vector<std::unordered_map<SGGuid, SGGuid>> entityData; // the entity leads to a position in the vector, and the guid is used to retrieve the guid of the actual texture/view
 
 		ID3D11Device* device;
 

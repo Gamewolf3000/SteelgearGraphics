@@ -1,12 +1,8 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <vector>
-#include <unordered_map>
 
-#include "SGResult.h"
-#include "SGRenderEngine.h"
-#include "SGGuid.h"
+#include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
 
@@ -62,7 +58,7 @@ namespace SG
 		MIRROR_ONCE
 	};
 
-	class D3D11SamplerHandler
+	class D3D11SamplerHandler : public SGGraphicsHandler
 	{
 	public:
 
@@ -80,11 +76,7 @@ namespace SG
 			ID3D11SamplerState* sampler = nullptr;
 		};
 
-
-
 		std::unordered_map<SGGuid, D3D11SamplerData> samplers;
-
-		std::vector<std::unordered_map<SGGuid, SGGuid>> entityData; // the entity leads to a position in the vector, and the guid is used to retrieve the guid of the actual sampler
 
 		ID3D11Device* device;
 

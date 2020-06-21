@@ -1,12 +1,8 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <vector>
-#include <unordered_map>
 
-#include "SGResult.h"
-#include "SGRenderEngine.h"
-#include "SGGuid.h"
+#include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
 
@@ -19,18 +15,27 @@ namespace SG
 		ENTITY
 	};
 
-	enum class DrawType
+	struct SGInputElement
 	{
-		DRAW,
-		DRAW_INDEXED,
-		DRAW_INSTANCED,
-		DRAW_INDEXED_INSTANCED
+		std::string semanticName;
+		UINT semanticIndex;
+		DXGI_FORMAT format;
+		UINT inputSlot;
+		UINT alignedByteOffset;
+		bool instancedData;
+		UINT instanceDataStepRate;
 	};
 
 	struct ShaderResource
 	{
 		Association source;
 		SGGuid resourceGuid;
+	};
+
+	struct PipelineComponent
+	{
+		Association source;
+		SGGuid componentGuid;
 	};
 
 	struct RenderShader
@@ -44,19 +49,19 @@ namespace SG
 	struct SGRenderPipeline
 	{
 		Association association;
-		SGGuid inputAssembly;
-		std::vector<ShaderResource> vertexBuffers;
-		std::vector<ShaderResource> indexBuffers;
+		PipelineComponent inputAssembly;
+		std::vector<PipelineComponent> vertexBuffers;
+		PipelineComponent indexBuffer;
 		RenderShader vertexShader;
 		RenderShader hullShader;
 		RenderShader domainShader;
 		RenderShader geometryShader;
 		RenderShader pixelShader;
-		std::vector<ShaderResource> uavs;
-		std::vector<SGGuid> rtvs;
-		SGGuid dsv;
-		SGGuid blendState;
-		DrawType drawType;
+		std::vector<PipelineComponent> uavs;
+		std::vector<PipelineComponent> rtvs;
+		PipelineComponent dsv;
+		PipelineComponent blendState;
+		PipelineComponent drawCall; // Replace with SGGuid to a DrawInfo struct in a new handler
 	};
 
 	struct SGComputePipeline
@@ -74,11 +79,14 @@ namespace SG
 		std::vector<SGGuid> subPipelines;
 	};
 
-	class SGGraphicsPipelineHandler
+	class SGGraphicsPipelineHandler : public SGGraphicsHandler
 	{
 	public:
 		SGGraphicsPipelineHandler(ID3D11Device* device);
 		~SGGraphicsPipelineHandler();
+
+		SGResult CreateInputLayout(const SGGuid& guid, const SGGuid& vertexShaderGuid, const std::vector<SGInputElement>& inputElements);
+
 
 	private:
 		enum PipelineType
@@ -87,9 +95,14 @@ namespace SG
 			COMPUTE
 		};
 
+		struct D3D11InputLayoutData
+		{
+			ID3D11InputLayout* inputLayout = nullptr;
+		};
+
+		std::unordered_map<SGGuid, D3D11InputLayoutData> inputLayouts;
 		std::unordered_map<SGGuid, SGRenderPipeline> renderPipelines;
 		std::unordered_map<SGGuid, SGComputePipeline> computePipelines;
 		std::unordered_map<SGGuid, SGGraphicsPipeline> graphicsPipelines;
-
 	};
 }

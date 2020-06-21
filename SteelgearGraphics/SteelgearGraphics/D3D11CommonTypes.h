@@ -24,6 +24,18 @@ namespace SG
 		SGGuid resourceGuid;
 	};
 
+	struct ResourceData
+	{
+		void* data  = nullptr;
+		size_t size = 0;
+	};
+
+	enum class UpdateStrategy
+	{
+		DISCARD,
+		NO_OVERWRITE
+	};
+
 	enum class ComparisonFunction
 	{
 		NEVER,
