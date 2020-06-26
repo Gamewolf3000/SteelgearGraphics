@@ -54,8 +54,8 @@ namespace SG
 		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipLevels, UINT firstWSlice = 0, UINT wSize = 0);
 		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
-		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice);
-		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
+		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice);
+		SGResult CreateDSVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
 
 	private:

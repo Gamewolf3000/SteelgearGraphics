@@ -1,6 +1,7 @@
 #pragma once
 
 #include <d3d11_4.h>
+#include <utility>
 
 #include "SGGraphicsHandler.h"
 
@@ -70,6 +71,18 @@ namespace SG
 		MAX
 	};
 
+	struct RenderTargetBlending
+	{
+		BOOL blendEnable;
+		Blend srcBlend;
+		Blend destBlend;
+		BlendOp blendOp;
+		Blend srcBlendAlpha;
+		Blend destBlendAlpha;
+		BlendOp blendOpAlpha;
+		UINT8 renderTargetWriteMask;
+	};
+
 	class D3D11StateHandler : public SGGraphicsHandler
 	{
 	public:
@@ -85,10 +98,14 @@ namespace SG
 											DepthStencilOp frontFaceStencilPassOp, ComparisonFunction frontFaceStencilFunc, DepthStencilOp backFaceStencilFailOp,
 											DepthStencilOp backFaceStencilDepthFailOp, DepthStencilOp backFaceStencilPassOp, ComparisonFunction backFaceStencilFunc);
 
-		SGResult CreateDepthStencilState(const SGGuid& guid, BOOL blendEnable, Blend srcBlend, Blend destBlend, BlendOp blendOp,
-			Blend srcBlendAlpha, Blend destBlendAlpha, BlendOp blendOpAlpha, UINT8 renderTargetWriteMask);
+		SGResult CreateBlendState(const SGGuid& guid, BOOL alphaToCoverageEnable, BOOL independentBlendEnable, std::vector<RenderTargetBlending> renderTargets);
 
 		SGResult CreateViewport(const SGGuid& guid, FLOAT topLeftX, FLOAT topLeftY, FLOAT width, FLOAT height, FLOAT minDepth, FLOAT maxDepth);
+
+		SGResult CreateDepthStencilData(const SGGuid& guid, UINT stencilRef);
+
+		SGResult CreateBlendData(const SGGuid& guid, const FLOAT blendFactor[4], UINT sampleMask);
+
 
 	private:
 
@@ -103,12 +120,33 @@ namespace SG
 
 		};
 
+		struct DepthStencilSetData
+		{
+			UINT stencilRef;
+		};
+
+		struct BlendSetData
+		{
+			const FLOAT blendFactor[4];
+			UINT sampleMask;
+		};
+
+		struct D3D11SetData
+		{
+			union
+			{
+				DepthStencilSetData depthStencil;
+				BlendSetData blend;
+			};
+		};
+
 		struct D3D11ViewportData
 		{
 			D3D11_VIEWPORT viewport;
 		};
 
 		std::unordered_map<SGGuid, D3D11StateData> states;
+		std::unordered_map<SGGuid, D3D11SetData> setData;
 		std::unordered_map<SGGuid, D3D11ViewportData> viewports;
 
 		ID3D11Device* device;

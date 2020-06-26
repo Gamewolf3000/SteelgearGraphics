@@ -42,9 +42,4 @@ namespace SG
 	{
 		return myID == other.myID;
 	}
-
-	std::size_t SGGuid::operator()(const SGGuid & other) const
-	{
-		return myID;
-	}
 }

@@ -47,4 +47,15 @@ namespace SG
 		GREATER_EQUAL,
 		ALWAYS
 	};
+
+	template<class T>
+	void ReleaseCOM(T* &comObject)
+	{
+
+		if (comObject != nullptr)
+		{
+			comObject->Release();
+			comObject = nullptr;
+		}
+	}
 }

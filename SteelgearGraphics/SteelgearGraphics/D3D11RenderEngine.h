@@ -1,7 +1,8 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <dxgi1_6.h>
+#include <exception>
+#include <stdexcept>
 
 #include "SGRenderEngine.h"
 
@@ -21,11 +22,11 @@ namespace SG
 		D3D11RenderEngine(const SGRenderSettings& settings);
 		~D3D11RenderEngine();
 
-
 	private:
-		ID3D11Device* device;
-		ID3D11DeviceContext* immediateContext;
-		std::vector<ID3D11DeviceContext> defferedContexts;
+		ID3D11Device* device = nullptr;
+		ID3D11DeviceContext* immediateContext = nullptr;
+		std::vector<ID3D11DeviceContext*> defferedContexts;
+		IDXGISwapChain* swapChain = nullptr;
 
 		D3D11BufferHandler* bufferHandler;
 		D3D11DrawDataHandler* drawDataHandler;
@@ -33,6 +34,9 @@ namespace SG
 		D3D11ShaderManager* shaderManager;
 		D3D11StateHandler* stateHandler;
 		D3D11TextureHandler* textureHandler;
-		SGGraphicsPipelineHandler pipelineHandler;
+		SGGraphicsPipelineHandler* pipelineHandler;
+
+		void CreateDeviceAndContext(const SGRenderSettings& settings);
+		void CreateSwapChain(const SGRenderSettings& settings);
 	};
 }
