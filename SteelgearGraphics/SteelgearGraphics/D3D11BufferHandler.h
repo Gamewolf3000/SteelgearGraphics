@@ -38,6 +38,12 @@ namespace SG
 		void UpdateBuffer(const SGGuid& guid, UpdateStrategy updateStrategy, void* data, size_t byteSize, UINT subresource = 0);
 
 
+
+
+		void SwapUpdateBuffer();
+		void SwapToWorkWithBuffer();
+
+
 	private:
 		enum class BufferType
 		{
@@ -76,7 +82,10 @@ namespace SG
 		std::unordered_map<SGGuid, D3D11BufferData> buffers;
 		std::unordered_map<SGGuid, D3D11ResourceViewData> views;
 
-		ID3D11Device* device;
+		int toWorkWith = 0;
+		int toUseNext = 1;
+		int toUpdate = 2;
 
+		ID3D11Device* device;
 	};
 }

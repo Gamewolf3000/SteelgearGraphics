@@ -46,7 +46,7 @@ namespace SG
 		std::vector<ShaderResource> samplers;
 	};
 
-	struct SGRenderPipeline
+	struct SGRenderJob
 	{
 		Association association;
 		PipelineComponent inputAssembly;
@@ -64,7 +64,7 @@ namespace SG
 		PipelineComponent drawCall; // Replace with SGGuid to a DrawInfo struct in a new handler
 	};
 
-	struct SGComputePipeline
+	struct SGComputeJob
 	{
 		Association association;
 		SGGuid shader;
@@ -74,25 +74,46 @@ namespace SG
 		std::vector<ShaderResource> uavs;
 	};
 
-	struct SGGraphicsPipeline
+	struct SGClearRenderTargetJob
 	{
-		std::vector<SGGuid> subPipelines;
+		SGGuid toClear;
+		float color[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	};
 
-	class SGGraphicsPipelineHandler : public SGGraphicsHandler
+	struct SGClearDepthStencilJob
+	{	
+		bool clearDepth;
+		bool clearStencil;
+		FLOAT depthClearValue;
+		UINT8 stencilClearValue;
+	};
+
+	struct SGPipeline
+	{
+		std::vector<SGGuid> jobs;
+	};
+
+	class D3D11PipelineManager
 	{
 	public:
-		SGGraphicsPipelineHandler(ID3D11Device* device);
-		~SGGraphicsPipelineHandler();
+		D3D11PipelineManager(ID3D11Device* device);
+		~D3D11PipelineManager();
 
 		SGResult CreateInputLayout(const SGGuid& guid, const SGGuid& vertexShaderGuid, const std::vector<SGInputElement>& inputElements);
+		SGResult CreateRenderJob(const SGGuid& guid, const SGRenderJob& job);
+		SGResult CreateComputeJob(const SGGuid& guid, const SGComputeJob& job);
+		SGResult CreateClearRenderTargetJob(const SGGuid& guid, const SGClearRenderTargetJob& job);
+		SGResult CreateClearDepthStencilJob(const SGGuid& guid, const SGClearDepthStencilJob& job);
+		SGResult CreatePipeline(const SGGuid& guid, const SGPipeline& pipeline);
 
 
 	private:
-		enum PipelineType
+		enum PipelineJobType
 		{
 			RENDER,
-			COMPUTE
+			COMPUTE,
+			CLEAR_RENDER_TARGET,
+			CLEAR_DEPTH_STENCIL
 		};
 
 		struct D3D11InputLayoutData
@@ -100,9 +121,13 @@ namespace SG
 			ID3D11InputLayout* inputLayout = nullptr;
 		};
 
-		std::unordered_map<SGGuid, D3D11InputLayoutData> inputLayouts;
-		std::unordered_map<SGGuid, SGRenderPipeline> renderPipelines;
-		std::unordered_map<SGGuid, SGComputePipeline> computePipelines;
-		std::unordered_map<SGGuid, SGGraphicsPipeline> graphicsPipelines;
+		LockableUnorderedMap<SGGuid, D3D11InputLayoutData> inputLayouts;
+		LockableUnorderedMap<SGGuid, SGRenderJob> renderJobs;
+		LockableUnorderedMap<SGGuid, SGComputeJob> computeJobs;
+		LockableUnorderedMap<SGGuid, SGClearRenderTargetJob> clearRenderTargetJobs;
+		LockableUnorderedMap<SGGuid, SGClearDepthStencilJob> clearDepthStencilJobs;
+		LockableUnorderedMap<SGGuid, SGPipeline> pipelines;
+
+		ID3D11Device* device;
 	};
 }

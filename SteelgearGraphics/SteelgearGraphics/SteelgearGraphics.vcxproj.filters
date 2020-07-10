@@ -1,69 +1,91 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="D3D11">
+      <UniqueIdentifier>{88f1bbaf-2a66-4bb4-a66c-fc13b406fcdb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="TopInterface">
+      <UniqueIdentifier>{f9ee27e4-1e10-468d-bc45-085fdb33e620}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Other">
+      <UniqueIdentifier>{29844e19-c374-43df-b8e3-a56c58a81a44}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="SGGuid.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SGGraphicalEntity.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="D3D11BufferHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11RenderEngine.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SGRenderEngine.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11TextureHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SGResult.h">
-      <Filter>Header Files</Filter>
+      <Filter>D3D11</Filter>
     </ClInclude>
     <ClInclude Include="D3D11CommonTypes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11SamplerHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SGGraphicsPipelineHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11StateHandler.h">
-      <Filter>Header Files</Filter>
+      <Filter>D3D11</Filter>
     </ClInclude>
     <ClInclude Include="D3D11DrawDataHandler.h">
-      <Filter>Header Files</Filter>
+      <Filter>D3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11PipelineManager.h">
+      <Filter>D3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11RenderEngine.h">
+      <Filter>D3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11SamplerHandler.h">
+      <Filter>D3D11</Filter>
     </ClInclude>
     <ClInclude Include="D3D11ShaderManager.h">
-      <Filter>Header Files</Filter>
+      <Filter>D3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11StateHandler.h">
+      <Filter>D3D11</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11TextureHandler.h">
+      <Filter>D3D11</Filter>
     </ClInclude>
     <ClInclude Include="SGGraphicsHandler.h">
-      <Filter>Header Files</Filter>
+      <Filter>TopInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="SGRenderEngine.h">
+      <Filter>TopInterface</Filter>
+    </ClInclude>
+    <ClInclude Include="LockableUnorderedMap.h">
+      <Filter>Other</Filter>
+    </ClInclude>
+    <ClInclude Include="SGGraphicalEntity.h">
+      <Filter>Other</Filter>
+    </ClInclude>
+    <ClInclude Include="SGGuid.h">
+      <Filter>Other</Filter>
+    </ClInclude>
+    <ClInclude Include="SGResult.h">
+      <Filter>Other</Filter>
+    </ClInclude>
+    <ClInclude Include="SGThreadPool.h">
+      <Filter>Other</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SGGuid.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="D3D11PipelineManager.cpp">
+      <Filter>D3D11</Filter>
     </ClCompile>
     <ClCompile Include="D3D11RenderEngine.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>D3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11TextureHandler.cpp">
+      <Filter>D3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="SGGuid.cpp">
+      <Filter>Other</Filter>
+    </ClCompile>
+    <ClCompile Include="SGRenderEngine.cpp">
+      <Filter>TopInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="SGThreadPool.cpp">
+      <Filter>Other</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11BufferHandler.cpp">
+      <Filter>D3D11</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

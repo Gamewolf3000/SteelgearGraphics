@@ -20,7 +20,20 @@ namespace SG
 		~SGGuid();
 
 		bool operator==(const SGGuid& other) const;
-		std::size_t operator()(const SGGuid& other) const;
 
+		unsigned int GetID() const;
+	};
+
+}
+
+namespace std
+{
+	template<>
+	struct hash<SG::SGGuid>
+	{
+		size_t operator()(const SG::SGGuid & obj) const
+		{
+			return hash<int>()(obj.GetID());
+		}
 	};
 }

@@ -8,15 +8,15 @@
 
 namespace SG
 {
-	/*
-	enum class TextureUsage
+	
+	enum class TextureBinding
 	{
 		SHADER_RESOURCE,
 		RENDER_TARGET,
 		DEPTH_STENCIL,
 		UNORDERED_ACCESS
 	};
-	*/
+	
 
 	struct SGTextureData
 	{
@@ -25,7 +25,7 @@ namespace SG
 		bool gpuWritable;
 		bool cpuWritable;
 		bool cpuReadable;
-		//TextureUsage usage;
+		std::vector<TextureBinding> textureBindings;
 		bool generateMips;
 		bool resourceClamp;
 		void* data;
@@ -48,14 +48,21 @@ namespace SG
 		SGResult CreateSRV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels);
 		SGResult CreateSRVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels, UINT firstArraySlice, UINT arraySize);
 
-		SGResult CreateUAV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipLevels, UINT firstWSlice = 0, UINT wSize = 0);
+		SGResult CreateUAV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice = 0, UINT wSize = 0);
 		SGResult CreateUAVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice = 0, UINT arraySize = 0);
 
-		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipLevels, UINT firstWSlice = 0, UINT wSize = 0);
+		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice = 0, UINT wSize = 0);
 		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
 		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice);
 		SGResult CreateDSVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
+
+
+
+		void AddTexture2D(const SGGuid& guid, ID3D11Texture2D* texture);
+
+		void SwapUpdateBuffer();
+		void SwapToWorkWithBuffer();
 
 
 	private:
@@ -86,10 +93,18 @@ namespace SG
 		};
 
 
-		std::unordered_map<SGGuid, D3D11TextureData> textures;
-		std::unordered_map<SGGuid, D3D11ResourceViewData> views;
+		LockableUnorderedMap<SGGuid, D3D11TextureData> textures;
+		LockableUnorderedMap<SGGuid, D3D11ResourceViewData> views;
+
+		int toWorkWith = 0;
+		int toUseNext = 1;
+		int toUpdate = 2;
 
 		ID3D11Device* device;
 
+		void SetUsageAndCPUAccessFlags(const SGTextureData & generalSettings, D3D11_USAGE& usage, UINT& cpuAccessFlags);
+		void SetBindflags(const SGTextureData & generalSettings, UINT& flags);
+		D3D11_RTV_DIMENSION GetRTVDimension(TextureType type);
+		D3D11_DSV_DIMENSION GetDSVDimension(TextureType type);
 	};
 }

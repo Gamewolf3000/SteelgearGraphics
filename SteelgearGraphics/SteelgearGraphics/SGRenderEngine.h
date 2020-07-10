@@ -3,6 +3,13 @@
 #include <Windows.h>
 #include <dxgi1_6.h>
 
+#include <vector>
+#include <mutex>
+
+#include "SGGraphicalEntity.h"
+#include "SGGuid.h"
+#include "SGThreadPool.h"
+
 #if defined(_DEBUG) || defined(DEBUG)
 constexpr bool DEBUG_VERSION = true;
 #else
@@ -14,10 +21,6 @@ constexpr bool TREADEDSAFE_VERSION = true;
 #else
 constexpr bool TREADEDSAFE_VERSION = false;
 #endif
-
-#include <vector>
-
-#include "SGGraphicalEntity.h"
 
 namespace SG
 {
@@ -46,15 +49,34 @@ namespace SG
 		SGBackBufferSettings backBufferSettings;
 	};
 
+	struct SGPipelineJob
+	{
+		SGGuid pipelineGuid;
+		std::vector<SGGraphicalEntityID> entitiesToRender;
+	};
+
 	class SGRenderEngine
 	{
 	public:
-		SGRenderEngine() = default;
+		SGRenderEngine(const SGRenderSettings& settings);
 		virtual ~SGRenderEngine() = default;
 
+		void Render(const std::vector<SGPipelineJob>& jobs);
 
 	protected:
 
+		void RenderThreadFunction();
+		virtual void SwapUpdateBuffer() = 0;
+		virtual void SwapToWorkWithBuffer() = 0;
+		virtual void HandleRenderJob(const std::vector<SGPipelineJob>& jobs) = 0;
+
 		std::vector<SGGraphicalEntity> graphicalEntities;
+		std::vector<SGPipelineJob> pipelineJobs[3];
+		std::mutex dataIndexMutex;
+		int toWorkWith = 0;
+		int toUseNext = 1;
+		int toUpdate = 2;
+		SGThreadPool* threadPool;
+		volatile bool active = true;
 	};
 }

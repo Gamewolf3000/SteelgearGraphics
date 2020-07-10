@@ -42,4 +42,8 @@ namespace SG
 	{
 		return myID == other.myID;
 	}
+	unsigned int SGGuid::GetID() const
+	{
+		return myID;
+	}
 }

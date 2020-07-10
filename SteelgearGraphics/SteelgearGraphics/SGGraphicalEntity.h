@@ -4,6 +4,6 @@ namespace SG
 {
 	class SGGraphicalEntity
 	{
-		// Empty?
+		unsigned int groupID = static_cast<unsigned int>(-1);
 	};
 }

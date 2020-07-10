@@ -4,6 +4,7 @@ namespace SG
 {
 	enum class SGResult
 	{
-		OK
+		OK,
+		GUID_MISSING
 	};
 }

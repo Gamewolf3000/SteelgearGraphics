@@ -12,10 +12,11 @@
 #include "D3D11ShaderManager.h"
 #include "D3D11StateHandler.h"
 #include "D3D11TextureHandler.h"
-#include "SGGraphicsPipelineHandler.h"
+#include "D3D11PipelineManager.h"
 
 namespace SG
 {
+
 	class D3D11RenderEngine : public SGRenderEngine
 	{
 	public:
@@ -34,9 +35,14 @@ namespace SG
 		D3D11ShaderManager* shaderManager;
 		D3D11StateHandler* stateHandler;
 		D3D11TextureHandler* textureHandler;
-		SGGraphicsPipelineHandler* pipelineHandler;
+		D3D11PipelineManager* pipelineHandler;
 
 		void CreateDeviceAndContext(const SGRenderSettings& settings);
 		void CreateSwapChain(const SGRenderSettings& settings);
+
+		// Inherited via SGRenderEngine
+		void SwapUpdateBuffer() override;
+		void SwapToWorkWithBuffer() override;
+		void HandleRenderJob(const std::vector<SGPipelineJob>& jobs) override;
 	};
 }

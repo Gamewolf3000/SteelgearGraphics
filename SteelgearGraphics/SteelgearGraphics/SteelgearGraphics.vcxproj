@@ -166,17 +166,24 @@
     <ClInclude Include="D3D11SamplerHandler.h" />
     <ClInclude Include="D3D11ShaderManager.h" />
     <ClInclude Include="D3D11TextureHandler.h" />
+    <ClInclude Include="LockableUnorderedMap.h" />
     <ClInclude Include="SGGraphicsHandler.h" />
     <ClInclude Include="SGResult.h" />
     <ClInclude Include="SGGraphicalEntity.h" />
     <ClInclude Include="SGGuid.h" />
     <ClInclude Include="D3D11RenderEngine.h" />
-    <ClInclude Include="SGGraphicsPipelineHandler.h" />
+    <ClInclude Include="D3D11PipelineManager.h" />
     <ClInclude Include="SGRenderEngine.h" />
+    <ClInclude Include="SGThreadPool.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="D3D11BufferHandler.cpp" />
+    <ClCompile Include="D3D11PipelineManager.cpp" />
     <ClCompile Include="D3D11RenderEngine.cpp" />
+    <ClCompile Include="D3D11TextureHandler.cpp" />
     <ClCompile Include="SGGuid.cpp" />
+    <ClCompile Include="SGRenderEngine.cpp" />
+    <ClCompile Include="SGThreadPool.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

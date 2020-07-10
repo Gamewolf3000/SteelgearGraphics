@@ -1,7 +1,7 @@
 #include "D3D11RenderEngine.h"
 #include "D3D11CommonTypes.h"
 
-SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings)
+SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SGRenderEngine(settings)
 {
 	this->CreateDeviceAndContext(settings);
 	this->CreateSwapChain(settings);
@@ -10,7 +10,7 @@ SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings)
 	//samplerHandler;
 	//shaderManager;
 	//stateHandler;
-	//textureHandler;
+	this->textureHandler = new D3D11TextureHandler(device);
 	//pipelineHandler;
 }
 
@@ -81,4 +81,27 @@ void SG::D3D11RenderEngine::CreateSwapChain(const SGRenderSettings & settings)
 	ReleaseCOM(dxgiDevice);
 	ReleaseCOM(dxgiAdapter);
 	ReleaseCOM(dxgiFactory);
+
+	for (int i = 0; i < settings.backBufferSettings.nrOfBackBuffers; ++i)
+	{
+		ID3D11Texture2D* texture;
+		swapChain->GetBuffer(i, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture));
+		textureHandler->AddTexture2D(SGGuid(std::string("SG_BACKBUFFER_") + std::to_string(i)), texture);
+	}
+}
+
+void SG::D3D11RenderEngine::SwapUpdateBuffer()
+{
+	//bufferHandler->SwapUpdateBuffer();
+	textureHandler->SwapUpdateBuffer();
+}
+
+void SG::D3D11RenderEngine::SwapToWorkWithBuffer()
+{
+	//bufferHandler->SwapToWorkWithBuffer();
+	textureHandler->SwapToWorkWithBuffer();
+}
+
+void SG::D3D11RenderEngine::HandleRenderJob(const std::vector<SGPipelineJob>& jobs)
+{
 }
