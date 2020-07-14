@@ -49,7 +49,7 @@ namespace SG
 	struct SGRenderJob
 	{
 		Association association;
-		PipelineComponent inputAssembly;
+		SGGuid inputAssembly;
 		std::vector<PipelineComponent> vertexBuffers;
 		PipelineComponent indexBuffer;
 		RenderShader vertexShader;

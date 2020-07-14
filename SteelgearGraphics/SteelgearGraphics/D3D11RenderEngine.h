@@ -44,5 +44,8 @@ namespace SG
 		void SwapUpdateBuffer() override;
 		void SwapToWorkWithBuffer() override;
 		void HandleRenderJob(const std::vector<SGPipelineJob>& jobs) override;
+
+		void HandlePipelineJobs(const std::vector<SGPipelineJob>& jobs, int startPos, int endPos, ID3D11DeviceContext* context);
+		void HandleRenderJob()
 	};
 }
