@@ -31,6 +31,6 @@ void SG::SGRenderEngine::RenderThreadFunction()
 		SwapToWorkWithBuffer();
 		dataIndexMutex.unlock();
 
-
+		HandleRenderJob(pipelineJobs[toWorkWith]);
 	}
 }

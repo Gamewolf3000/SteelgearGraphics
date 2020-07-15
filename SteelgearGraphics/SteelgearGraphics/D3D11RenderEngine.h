@@ -35,7 +35,7 @@ namespace SG
 		D3D11ShaderManager* shaderManager;
 		D3D11StateHandler* stateHandler;
 		D3D11TextureHandler* textureHandler;
-		D3D11PipelineManager* pipelineHandler;
+		D3D11PipelineManager* pipelineManager;
 
 		void CreateDeviceAndContext(const SGRenderSettings& settings);
 		void CreateSwapChain(const SGRenderSettings& settings);
@@ -46,6 +46,6 @@ namespace SG
 		void HandleRenderJob(const std::vector<SGPipelineJob>& jobs) override;
 
 		void HandlePipelineJobs(const std::vector<SGPipelineJob>& jobs, int startPos, int endPos, ID3D11DeviceContext* context);
-		void HandleRenderJob()
+		void HandleClearRenderTargetJob(const SGClearRenderTargetJob& job, ID3D11DeviceContext* context);
 	};
 }

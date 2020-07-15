@@ -10,8 +10,8 @@ namespace SG
 	private:
 
 
-		static std::unordered_map<std::string, unsigned int> guids;
-		unsigned int myID;
+		static std::unordered_map<std::string, size_t> guids;
+		size_t myID;
 
 	public:
 		SGGuid();
@@ -21,7 +21,7 @@ namespace SG
 
 		bool operator==(const SGGuid& other) const;
 
-		unsigned int GetID() const;
+		size_t GetID() const;
 	};
 
 }
@@ -33,7 +33,7 @@ namespace std
 	{
 		size_t operator()(const SG::SGGuid & obj) const
 		{
-			return hash<int>()(obj.GetID());
+			return hash<size_t>()(obj.GetID());
 		}
 	};
 }

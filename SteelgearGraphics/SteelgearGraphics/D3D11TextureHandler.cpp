@@ -151,6 +151,25 @@ void SG::D3D11TextureHandler::SwapToWorkWithBuffer()
 	std::swap(toWorkWith, toUseNext);
 }
 
+ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid)
+{
+	views.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (views.find(guid) == views.end())
+			throw std::runtime_error("Error fetching rtv, guid does not exist");
+
+		if (views[guid].type != ResourceViewType::RTV)
+			throw std::runtime_error("Error fetching rtv, guid does not match an rtv");
+	}
+
+	auto toReturn = views[guid].view.rtv;
+	views.unlock();
+
+	return toReturn;
+}
+
 void SG::D3D11TextureHandler::SetUsageAndCPUAccessFlags(const SGTextureData & generalSettings, D3D11_USAGE & usage, UINT & cpuAccessFlags)
 {
 	if (!generalSettings.cpuWritable && !generalSettings.cpuReadable && !generalSettings.gpuWritable)

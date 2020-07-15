@@ -2,7 +2,7 @@
 
 namespace SG
 {
-	std::unordered_map<std::string, unsigned int> SGGuid::guids;
+	std::unordered_map<std::string, size_t> SGGuid::guids;
 
 	SG::SGGuid::SGGuid()
 	{
@@ -42,7 +42,7 @@ namespace SG
 	{
 		return myID == other.myID;
 	}
-	unsigned int SGGuid::GetID() const
+	size_t SGGuid::GetID() const
 	{
 		return myID;
 	}

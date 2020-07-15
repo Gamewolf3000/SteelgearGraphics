@@ -1,6 +1,7 @@
 #pragma once
 
 #include <d3d11_4.h>
+#include <utility>
 
 #include "SGGraphicsHandler.h"
 
@@ -88,9 +89,17 @@ namespace SG
 		UINT8 stencilClearValue;
 	};
 
+	enum class PipelineJobType
+	{
+		RENDER,
+		COMPUTE,
+		CLEAR_RENDER_TARGET,
+		CLEAR_DEPTH_STENCIL
+	};
+
 	struct SGPipeline
 	{
-		std::vector<SGGuid> jobs;
+		std::vector<std::pair<PipelineJobType, SGGuid>> jobs;
 	};
 
 	class D3D11PipelineManager
@@ -106,15 +115,14 @@ namespace SG
 		SGResult CreateClearDepthStencilJob(const SGGuid& guid, const SGClearDepthStencilJob& job);
 		SGResult CreatePipeline(const SGGuid& guid, const SGPipeline& pipeline);
 
+		SGRenderJob GetRenderJob(const SGGuid& guid);
+		SGComputeJob GetComputeJob(const SGGuid& guid);
+		SGClearRenderTargetJob GetClearRenderTargetJob(const SGGuid& guid);
+		SGClearDepthStencilJob GetClearDepthStencilJob(const SGGuid& guid);
+		SGPipeline GetPipeline(const SGGuid& guid);
+
 
 	private:
-		enum PipelineJobType
-		{
-			RENDER,
-			COMPUTE,
-			CLEAR_RENDER_TARGET,
-			CLEAR_DEPTH_STENCIL
-		};
 
 		struct D3D11InputLayoutData
 		{

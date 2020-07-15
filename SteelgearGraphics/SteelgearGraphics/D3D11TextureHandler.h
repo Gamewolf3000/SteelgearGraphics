@@ -65,6 +65,10 @@ namespace SG
 		void SwapToWorkWithBuffer();
 
 
+
+		ID3D11RenderTargetView* GetRTV(const SGGuid& guid);
+
+
 	private:
 		enum class TextureType
 		{
