@@ -94,7 +94,8 @@ namespace SG
 		RENDER,
 		COMPUTE,
 		CLEAR_RENDER_TARGET,
-		CLEAR_DEPTH_STENCIL
+		CLEAR_DEPTH_STENCIL,
+		COPY_RESOURCE
 	};
 
 	struct SGPipeline
@@ -127,6 +128,11 @@ namespace SG
 		struct D3D11InputLayoutData
 		{
 			ID3D11InputLayout* inputLayout = nullptr;
+		};
+
+		struct DrawCall
+		{
+
 		};
 
 		LockableUnorderedMap<SGGuid, D3D11InputLayoutData> inputLayouts;

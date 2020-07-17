@@ -16,8 +16,8 @@ namespace SG
 		D3D11BufferHandler(ID3D11Device* device);
 		~D3D11BufferHandler();
 
-		SGResult CreateVertexBuffer(const SGGuid& guid, UINT size, bool dynamic, bool streamOut, void* data);
-		SGResult CreateIndexBuffer(const SGGuid& guid, UINT size, bool dynamic, void* data);
+		SGResult CreateVertexBuffer(const SGGuid& guid, UINT size, UINT nrOfVertices, bool dynamic, bool streamOut, void* data);
+		SGResult CreateIndexBuffer(const SGGuid& guid, UINT size, UINT nrOfIndices, bool dynamic, void* data);
 		SGResult CreateConstantBuffer(const SGGuid& guid, UINT size, bool dynamic, bool cpuUpdate, void* data);
 		SGResult CreateStructuredBuffer(const SGGuid& guid, UINT count, UINT structSize, bool cpuWritable, bool gpuWritable, void* data);
 		SGResult CreateAppendConsumeBuffer(const SGGuid& guid, UINT size, UINT structsize, void* data);
@@ -34,14 +34,16 @@ namespace SG
 		*/
 		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, UINT firstElement, UINT numberOfElements);
 
+		SGResult BindBufferToEntity(const SGGraphicalEntityID& entity, const SGGuid& bufferGuid, const SGGuid& bindGuid);
 
-		void UpdateBuffer(const SGGuid& guid, UpdateStrategy updateStrategy, void* data, size_t byteSize, UINT subresource = 0);
+		void UpdateBuffer(const SGGuid& guid, const UpdateStrategy& updateStrategy, void* data, UINT subresource = 0);
 
 
 
 
 		void SwapUpdateBuffer();
 		void SwapToWorkWithBuffer();
+		void UpdateBuffers(ID3D11DeviceContext* context);
 
 
 	private:
@@ -76,15 +78,17 @@ namespace SG
 				IndexBufferData ib;
 			} specificData;
 			ID3D11Buffer* buffer = nullptr;
-			std::pair<ResourceData, UpdateStrategy> UpdatedData[3];
+			UpdateData UpdatedData[3];
 		};
 
-		std::unordered_map<SGGuid, D3D11BufferData> buffers;
-		std::unordered_map<SGGuid, D3D11ResourceViewData> views;
+		LockableUnorderedMap<SGGuid, D3D11BufferData> buffers;
+		LockableUnorderedMap<SGGuid, D3D11ResourceViewData> views;
 
 		int toWorkWith = 0;
 		int toUseNext = 1;
 		int toUpdate = 2;
+		std::mutex dataIndexMutex;
+		std::vector<SGGuid> updatedBuffers[3];
 
 		ID3D11Device* device;
 	};

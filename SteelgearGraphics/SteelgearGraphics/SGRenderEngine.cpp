@@ -5,6 +5,8 @@
 SG::SGRenderEngine::SGRenderEngine(const SGRenderSettings& settings)
 {
 	threadPool = new SGThreadPool(settings.nrOfContexts >= 1 ? settings.nrOfContexts - 1 : 0);
+	std::thread renderThread(&SG::SGRenderEngine::RenderThreadFunction, this);
+	renderThread.detach();
 }
 
 void SG::SGRenderEngine::Render(const std::vector<SGPipelineJob>& jobs)
@@ -18,9 +20,10 @@ void SG::SGRenderEngine::Render(const std::vector<SGPipelineJob>& jobs)
 
 void SG::SGRenderEngine::RenderThreadFunction()
 {
-	int lastIndex = -1;
+	renderthreadActive = true;
+	int lastIndex = toUseNext;
 
-	while (active)
+	while (engineActive)
 	{
 		if (lastIndex == toUseNext)
 			continue;
@@ -33,4 +36,6 @@ void SG::SGRenderEngine::RenderThreadFunction()
 
 		HandleRenderJob(pipelineJobs[toWorkWith]);
 	}
+
+	renderthreadActive = false;
 }

@@ -87,5 +87,6 @@
     <ClCompile Include="D3D11BufferHandler.cpp">
       <Filter>D3D11</Filter>
     </ClCompile>
+    <ClCompile Include="D3D11CommonTypes.cpp" />
   </ItemGroup>
 </Project>

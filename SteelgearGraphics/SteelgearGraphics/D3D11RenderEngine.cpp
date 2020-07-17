@@ -4,7 +4,6 @@
 SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SGRenderEngine(settings)
 {
 	this->CreateDeviceAndContext(settings);
-	this->CreateSwapChain(settings);
 	//bufferHandler;
 	//drawDataHandler;
 	//samplerHandler;
@@ -12,16 +11,36 @@ SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SG
 	//stateHandler;
 	this->textureHandler = new D3D11TextureHandler(device);
 	this->pipelineManager = new D3D11PipelineManager(device);
+	this->CreateSwapChain(settings);
 }
 
 SG::D3D11RenderEngine::~D3D11RenderEngine()
 {
+	engineActive = false;
+	while (renderthreadActive)
+	{
+		// Spinwait
+	}
+
 	ReleaseCOM(device);
 	ReleaseCOM(immediateContext);
 	ReleaseCOM(swapChain);
 
 	for (auto& context : defferedContexts)
 		ReleaseCOM(context);
+
+	delete textureHandler;
+	delete pipelineManager;
+}
+
+SG::D3D11TextureHandler * SG::D3D11RenderEngine::TextureHandler()
+{
+	return textureHandler;
+}
+
+SG::D3D11PipelineManager * SG::D3D11RenderEngine::PipelineManager()
+{
+	return pipelineManager;
 }
 
 void SG::D3D11RenderEngine::CreateDeviceAndContext(const SGRenderSettings & settings)
@@ -91,7 +110,7 @@ void SG::D3D11RenderEngine::CreateSwapChain(const SGRenderSettings & settings)
 	ReleaseCOM(dxgiAdapter);
 	ReleaseCOM(dxgiFactory);
 
-	for (int i = 0; i < settings.backBufferSettings.nrOfBackBuffers; ++i)
+	for (int i = 0; i < settings.backBufferSettings.nrOfBackBuffers - 1; ++i)
 	{
 		ID3D11Texture2D* texture;
 		swapChain->GetBuffer(i, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&texture));
@@ -115,18 +134,19 @@ void SG::D3D11RenderEngine::HandleRenderJob(const std::vector<SGPipelineJob>& jo
 {
 	unsigned int nrOfContexts = static_cast<unsigned int>(defferedContexts.size());
 	unsigned int jobsPerContext = static_cast<unsigned int>(jobs.size() / nrOfContexts);
-	std::vector<SG::FunctionStatus> statuses(nrOfContexts - 1);
-	int threadsToUse = nrOfContexts - 1;
+	size_t threadsToUse = (jobs.size() < nrOfContexts ? jobs.size() - 1 : nrOfContexts - 1);
+	std::vector<SG::FunctionStatus> statuses(threadsToUse);
 
-	for (int i = 0; i < threadsToUse; ++i)
+
+	for (int i = 0; i < static_cast<int>(threadsToUse); ++i)
 	{
 		auto temp = std::bind(&D3D11RenderEngine::HandlePipelineJobs, this, jobs, i * jobsPerContext, (i + 1) * jobsPerContext, defferedContexts[i]);
 		threadPool->EnqueFunction(&statuses[i], temp);
 	}
 
-	HandlePipelineJobs(jobs, nrOfContexts - 1, static_cast<int>(jobs.size()), defferedContexts.back());
+	HandlePipelineJobs(jobs, nrOfContexts - 1, static_cast<int>(jobs.size()), defferedContexts[threadsToUse]);
 
-	for (unsigned int i = 0; i < statuses.size(); ++i)
+	for (size_t i = 0; i < threadsToUse; ++i)
 	{
 		while (statuses[i] != FunctionStatus::FINISHED)
 		{
@@ -139,14 +159,16 @@ void SG::D3D11RenderEngine::HandleRenderJob(const std::vector<SGPipelineJob>& jo
 			throw std::runtime_error("Error finishing command list");
 
 		immediateContext->ExecuteCommandList(cmdList, false);
+		ReleaseCOM(cmdList);
 	}
 
 	ID3D11CommandList* cmdList;
 
-	if (FAILED(defferedContexts.back()->FinishCommandList(false, &cmdList)))
+	if (FAILED(defferedContexts[threadsToUse]->FinishCommandList(false, &cmdList)))
 		throw std::runtime_error("Error finishing command list");
 
 	immediateContext->ExecuteCommandList(cmdList, false);
+	ReleaseCOM(cmdList);
 
 	swapChain->Present(0, 0);
 }

@@ -52,6 +52,7 @@ namespace SG
 		SGResult CreateUAVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice = 0, UINT arraySize = 0);
 
 		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice = 0, UINT wSize = 0);
+		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid);
 		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
 		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice);
@@ -93,7 +94,7 @@ namespace SG
 				ID3D11Texture2D* texture2D;
 				ID3D11Texture3D* texture3D;
 			} texture;
-			std::pair<ResourceData, UpdateStrategy> UpdatedData[3];
+			UpdateData UpdatedData[3];
 		};
 
 

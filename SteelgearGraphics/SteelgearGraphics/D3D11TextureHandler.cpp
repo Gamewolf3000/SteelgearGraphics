@@ -7,6 +7,44 @@ SG::D3D11TextureHandler::D3D11TextureHandler(ID3D11Device * device)
 
 SG::D3D11TextureHandler::~D3D11TextureHandler()
 {
+	for (auto& texture : textures)
+	{
+		switch (texture.second.type)
+		{
+		case TextureType::TEXTURE_1D:
+			ReleaseCOM(texture.second.texture.texture1D);
+			break;
+		case TextureType::TEXTURE_2D:
+			ReleaseCOM(texture.second.texture.texture2D);
+			break;
+		case TextureType::TEXTURE_3D:
+			ReleaseCOM(texture.second.texture.texture3D);
+			break;
+		default:
+			break;
+		}
+	}
+
+	for (auto& view : views)
+	{
+		switch (view.second.type)
+		{
+		case ResourceViewType::RTV:
+			ReleaseCOM(view.second.view.rtv);
+			break;
+		case ResourceViewType::DSV:
+			ReleaseCOM(view.second.view.dsv);
+			break;
+		case ResourceViewType::SRV:
+			ReleaseCOM(view.second.view.srv);
+			break;
+		case ResourceViewType::UAV:
+			ReleaseCOM(view.second.view.uav);
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const SGTextureData & generalSettings, UINT width, UINT height, UINT arraySize, const DXGI_SAMPLE_DESC & sampleDesc, bool texturecube)
@@ -30,7 +68,8 @@ SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const
 
 	ID3D11Texture2D* texture;
 
-	device->CreateTexture2D(&desc, &data, &texture);
+	if (FAILED(device->CreateTexture2D(&desc, &data, &texture)))
+		return SGResult::FAIL;
 
 	D3D11TextureData toStore;
 	toStore.type = arraySize <= 1 ? TextureType::TEXTURE_2D : TextureType::TEXTURE_ARRAY_2D;
@@ -79,7 +118,34 @@ SG::SGResult SG::D3D11TextureHandler::CreateRTV(const SGGuid & guid, const SGGui
 
 	D3D11ResourceViewData toStore;
 	toStore.type = ResourceViewType::RTV;
-	device->CreateRenderTargetView(storedData->second.texture.texture2D, &desc, &toStore.view.rtv);
+
+	if (FAILED(device->CreateRenderTargetView(storedData->second.texture.texture2D, &desc, &toStore.view.rtv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11TextureHandler::CreateRTV(const SGGuid & guid, const SGGuid & textureGuid)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+		return SGResult::GUID_MISSING;
+
+	textures.unlock();
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::RTV;
+
+	if (FAILED(device->CreateRenderTargetView(storedData->second.texture.texture2D, nullptr, &toStore.view.rtv)))
+		return SGResult::FAIL;
+
 	toStore.resourceGuid = textureGuid;
 	views.lock();
 	views[guid] = toStore;
@@ -122,7 +188,10 @@ SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGui
 
 	D3D11ResourceViewData toStore;
 	toStore.type = ResourceViewType::DSV;
-	device->CreateDepthStencilView(storedData->second.texture.texture2D, &desc, &toStore.view.dsv);
+
+	if (FAILED(device->CreateDepthStencilView(storedData->second.texture.texture2D, &desc, &toStore.view.dsv)))
+		return SGResult::FAIL;
+
 	toStore.resourceGuid = textureGuid;
 	views.lock();
 	views[guid] = toStore;

@@ -5,6 +5,12 @@ SG::D3D11PipelineManager::D3D11PipelineManager(ID3D11Device * device)
 	this->device = device;
 }
 
+SG::D3D11PipelineManager::~D3D11PipelineManager()
+{
+	for (auto& layout : inputLayouts)
+		ReleaseCOM(layout.second.inputLayout);
+}
+
 SG::SGResult SG::D3D11PipelineManager::CreateClearRenderTargetJob(const SGGuid & guid, const SGClearRenderTargetJob & job)
 {
 	clearRenderTargetJobs.lock();

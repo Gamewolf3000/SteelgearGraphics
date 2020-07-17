@@ -77,6 +77,7 @@ namespace SG
 		int toUseNext = 1;
 		int toUpdate = 2;
 		SGThreadPool* threadPool;
-		volatile bool active = true;
+		volatile bool engineActive = true;
+		volatile bool renderthreadActive = false;
 	};
 }

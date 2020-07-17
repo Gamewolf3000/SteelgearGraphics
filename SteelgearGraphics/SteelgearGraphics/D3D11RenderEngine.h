@@ -23,6 +23,9 @@ namespace SG
 		D3D11RenderEngine(const SGRenderSettings& settings);
 		~D3D11RenderEngine();
 
+		D3D11TextureHandler* TextureHandler();
+		D3D11PipelineManager* PipelineManager();
+
 	private:
 		ID3D11Device* device = nullptr;
 		ID3D11DeviceContext* immediateContext = nullptr;
