@@ -6,17 +6,7 @@ namespace SG
 
 	SG::SGGuid::SGGuid()
 	{
-		auto target = guids.find("");
-	
-		if (target == guids.end())
-		{
-			myID = guids.size();
-			guids[""] = guids.size();
-		}
-		else
-		{
-			myID = guids[""];
-		}
+		myID = 0;
 	}
 
 	SGGuid::SGGuid(const std::string& identifier)
@@ -25,8 +15,8 @@ namespace SG
 
 		if (target == guids.end())
 		{
-			myID = guids.size();
-			guids[identifier] = guids.size();
+			myID = guids.size() + 1;
+			guids[identifier] = myID;
 		}
 		else
 		{

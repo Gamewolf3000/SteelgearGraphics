@@ -5,6 +5,7 @@
 #include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
+#include "TripleBufferedData.h"
 
 
 namespace SG
@@ -35,18 +36,15 @@ namespace SG
 		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, UINT firstElement, UINT numberOfElements);
 
 		SGResult BindBufferToEntity(const SGGraphicalEntityID& entity, const SGGuid& bufferGuid, const SGGuid& bindGuid);
+		SGResult BindBufferToGroup(const SGGuid& group, const SGGuid& bufferGuid, const SGGuid& bindGuid);
 
 		void UpdateBuffer(const SGGuid& guid, const UpdateStrategy& updateStrategy, void* data, UINT subresource = 0);
 
 
-
-
-		void SwapUpdateBuffer();
-		void SwapToWorkWithBuffer();
-		void UpdateBuffers(ID3D11DeviceContext* context);
-
-
 	private:
+
+		friend class D3D11RenderEngine;
+
 		enum class BufferType
 		{
 			VERTEX_BUFFER,
@@ -71,25 +69,31 @@ namespace SG
 		struct D3D11BufferData
 		{
 			BufferType type;
-			bool updated = false;
+			//bool updated = false;
 			union
 			{
 				VertexBufferData vb;
 				IndexBufferData ib;
 			} specificData;
 			ID3D11Buffer* buffer = nullptr;
-			UpdateData UpdatedData[3];
+			TripleBufferedData<UpdateData> updatedData;
 		};
 
 		LockableUnorderedMap<SGGuid, D3D11BufferData> buffers;
 		LockableUnorderedMap<SGGuid, D3D11ResourceViewData> views;
 
-		int toWorkWith = 0;
-		int toUseNext = 1;
-		int toUpdate = 2;
-		std::mutex dataIndexMutex;
-		std::vector<SGGuid> updatedBuffers[3];
+		std::mutex frameBufferMutex;
+		std::vector<SGGuid> updatedFrameBuffer;
+		std::vector<SGGuid> updatedTotalBuffer;
 
 		ID3D11Device* device;
+
+		void SwapUpdateBuffer();
+		void SwapToWorkWithBuffer();
+		void UpdateBuffers(ID3D11DeviceContext* context);
+
+		void SetShaderResources(const std::vector<ShaderResource>& toSet, ID3D11DeviceContext* context);
+		void SetShaderResources(const std::vector<ShaderResource>& toSet, ID3D11DeviceContext* context, const SGGuid& groupGuid);
+		void SetShaderResources(const std::vector<ShaderResource>& toSet, ID3D11DeviceContext* context, const SGGraphicalEntityID& entity);
 	};
 }

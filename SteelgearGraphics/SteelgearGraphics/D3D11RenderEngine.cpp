@@ -4,10 +4,9 @@
 SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SGRenderEngine(settings)
 {
 	this->CreateDeviceAndContext(settings);
-	//bufferHandler;
-	//drawDataHandler;
+	bufferHandler = new D3D11BufferHandler(device);
 	//samplerHandler;
-	//shaderManager;
+	shaderManager = new D3D11ShaderManager(device);
 	//stateHandler;
 	this->textureHandler = new D3D11TextureHandler(device);
 	this->pipelineManager = new D3D11PipelineManager(device);
@@ -29,8 +28,20 @@ SG::D3D11RenderEngine::~D3D11RenderEngine()
 	for (auto& context : defferedContexts)
 		ReleaseCOM(context);
 
+	delete bufferHandler;
+	delete shaderManager;
 	delete textureHandler;
 	delete pipelineManager;
+}
+
+SG::D3D11BufferHandler * SG::D3D11RenderEngine::BufferHandler()
+{
+	return bufferHandler;
+}
+
+SG::D3D11ShaderManager * SG::D3D11RenderEngine::ShaderManager()
+{
+	return shaderManager;
 }
 
 SG::D3D11TextureHandler * SG::D3D11RenderEngine::TextureHandler()
@@ -120,18 +131,22 @@ void SG::D3D11RenderEngine::CreateSwapChain(const SGRenderSettings & settings)
 
 void SG::D3D11RenderEngine::SwapUpdateBuffer()
 {
-	//bufferHandler->SwapUpdateBuffer();
+	bufferHandler->SwapUpdateBuffer();
 	textureHandler->SwapUpdateBuffer();
 }
 
 void SG::D3D11RenderEngine::SwapToWorkWithBuffer()
 {
-	//bufferHandler->SwapToWorkWithBuffer();
+	bufferHandler->SwapToWorkWithBuffer();
 	textureHandler->SwapToWorkWithBuffer();
 }
 
-void SG::D3D11RenderEngine::HandleRenderJob(const std::vector<SGPipelineJob>& jobs)
+void SG::D3D11RenderEngine::ExecuteJobs(const std::vector<SGPipelineJob>& jobs)
 {
+	//Simple way of doing the updates, can be improved
+	bufferHandler->UpdateBuffers(immediateContext);
+	//textureHandler->UpdateTextures(immediateContext);
+
 	unsigned int nrOfContexts = static_cast<unsigned int>(defferedContexts.size());
 	unsigned int jobsPerContext = static_cast<unsigned int>(jobs.size() / nrOfContexts);
 	size_t threadsToUse = (jobs.size() < nrOfContexts ? jobs.size() - 1 : nrOfContexts - 1);
@@ -183,12 +198,54 @@ void SG::D3D11RenderEngine::HandlePipelineJobs(const std::vector<SGPipelineJob>&
 		{
 			switch (job.first)
 			{
+			case PipelineJobType::RENDER:
+				HandleRenderJob(pipelineManager->GetRenderJob(job.second), jobs[i].entitiesToRender, context);
+				break;
 			case PipelineJobType::CLEAR_RENDER_TARGET:
 				HandleClearRenderTargetJob(pipelineManager->GetClearRenderTargetJob(job.second), context);
 				break;
 			}
 		}
 
+	}
+}
+
+void SG::D3D11RenderEngine::HandleRenderJob(const SGRenderJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
+{
+	SetShaders(job, context);
+
+	if (job.association == Association::GLOBAL)
+	{
+		//HandleGlobalRenderJob(job, entities, context);
+	}
+	else if (job.association == Association::GROUP)
+	{
+		//HandleGroupRenderJob(job, entities, context);
+	}
+	else if (job.association == Association::ENTITY)
+	{
+		HandleEntityRenderJob(job, entities, context);
+	}
+}
+
+void SG::D3D11RenderEngine::SetShaders(const SGRenderJob & job, ID3D11DeviceContext * context)
+{
+	shaderManager->SetInputLayout(job.inputAssembly, context);
+	shaderManager->SetVertexShader(job.vertexShader.shader, context);
+	//hull
+	//domain
+	//geometry
+	shaderManager->SetPixelShader(job.pixelShader.shader, context);
+}
+
+void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
+{
+	(void)job;
+	(void)context;
+	for (auto& entity : entities)
+	{
+		(void)entity;
+		//bufferHandler->SetShaderResources(job, context, entity);
 	}
 }
 

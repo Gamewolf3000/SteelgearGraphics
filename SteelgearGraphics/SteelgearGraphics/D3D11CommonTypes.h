@@ -10,6 +10,18 @@
 
 namespace SG
 {
+	enum class Association
+	{
+		GLOBAL,
+		GROUP,
+		ENTITY
+	};
+
+	struct ShaderResource
+	{
+		Association source;
+		SGGuid resourceGuid;
+	};
 
 	enum class ResourceViewType
 	{
@@ -44,6 +56,59 @@ namespace SG
 		size_t size = 0;
 		UpdateStrategy strategy;
 		UINT subresource;
+
+		UpdateData() = default;
+
+		UpdateData(size_t dataSize)
+		{
+			size = dataSize;
+			data = new char[size];
+		}
+
+		//UpdateData(const UpdateData& other)
+		//{
+		//	this->size = other.size;
+		//	this->data = new char[this->size];
+		//}
+
+		UpdateData(UpdateData&& other)
+		{
+			this->size = other.size;
+			this->data = other.data;
+			other.data = nullptr;
+			other.size = 0;
+		}
+
+		//const UpdateData& operator=(const UpdateData& other)
+		//{
+		//	if (this != &other)
+		//	{
+		//		delete this->data;
+		//		this->size = other.size;
+		//		this->data = other.data;
+		//	}
+
+		//	return *this;
+		//}
+
+		const UpdateData& operator=(UpdateData&& other)
+		{
+			if (this != &other)
+			{
+				delete this->data;
+				this->size = other.size;
+				this->data = other.data;
+				other.data = nullptr;
+				other.size = 0;
+			}
+
+			return *this;
+		}
+		
+		~UpdateData()
+		{
+			delete data;
+		}
 	};
 
 	enum class ComparisonFunction

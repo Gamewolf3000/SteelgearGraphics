@@ -75,7 +75,7 @@ SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const
 	toStore.type = arraySize <= 1 ? TextureType::TEXTURE_2D : TextureType::TEXTURE_ARRAY_2D;
 	toStore.texture.texture2D = texture;
 	textures.lock();
-	textures[guid] = toStore;
+	textures[guid] = std::move(toStore);
 	textures.unlock();
 
 	return SGResult::OK;
@@ -200,24 +200,72 @@ SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGui
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11TextureHandler::BindTextureToEntity(const SGGraphicalEntityID & entity, const SGGuid & textureGuid, const SGGuid & bindGuid)
+{
+	entityData.lock();
+	entityData[entity][bindGuid] = textureGuid;
+	entityData.unlock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		textures.lock();
+		if (textures.find(textureGuid) == textures.end())
+		{
+			textures.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		textures.unlock();
+	}
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11TextureHandler::BindTextureToGroup(const SGGuid & group, const SGGuid & textureGuid, const SGGuid & bindGuid)
+{
+	groupData.lock();
+	groupData[group][bindGuid] = textureGuid;
+	groupData.unlock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		textures.lock();
+		if (textures.find(textureGuid) == textures.end())
+		{
+			textures.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		textures.unlock();
+	}
+
+	return SGResult::OK;
+}
+
 void SG::D3D11TextureHandler::AddTexture2D(const SGGuid & guid, ID3D11Texture2D * texture)
 {
 	D3D11TextureData toStore;
 	toStore.type = TextureType::TEXTURE_2D;
 	toStore.texture.texture2D = texture;
 	textures.lock();
-	textures[guid] = toStore;
+	textures[guid] = std::move(toStore);
 	textures.unlock();
 }
 
 void SG::D3D11TextureHandler::SwapUpdateBuffer()
 {
-	std::swap(toUpdate, toUseNext);
+	// No need to lock since this function is called only by the render engine during certain conditions
+	for (auto& guid : updatedFrameBuffer)
+		textures[guid].updatedData.SwitchUpdateBuffer();
+
+	updatedTotalBuffer.insert(updatedTotalBuffer.end(), updatedFrameBuffer.begin(), updatedFrameBuffer.end());
 }
 
 void SG::D3D11TextureHandler::SwapToWorkWithBuffer()
 {
-	std::swap(toWorkWith, toUseNext);
+	// No need to lock since this function is called only by the render engine during certain conditions
+	for (auto& guid : updatedTotalBuffer)
+		textures[guid].updatedData.SwitchActiveBuffer();
+
+	updatedTotalBuffer.clear();
 }
 
 ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid)

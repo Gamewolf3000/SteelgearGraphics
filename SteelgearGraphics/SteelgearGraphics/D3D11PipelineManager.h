@@ -9,30 +9,6 @@
 
 namespace SG
 {
-	enum class Association
-	{
-		GLOBAL,
-		GROUP,
-		ENTITY
-	};
-
-	struct SGInputElement
-	{
-		std::string semanticName;
-		UINT semanticIndex;
-		DXGI_FORMAT format;
-		UINT inputSlot;
-		UINT alignedByteOffset;
-		bool instancedData;
-		UINT instanceDataStepRate;
-	};
-
-	struct ShaderResource
-	{
-		Association source;
-		SGGuid resourceGuid;
-	};
-
 	struct PipelineComponent
 	{
 		Association source;
@@ -62,7 +38,7 @@ namespace SG
 		std::vector<PipelineComponent> rtvs;
 		PipelineComponent dsv;
 		PipelineComponent blendState;
-		PipelineComponent drawCall; // Replace with SGGuid to a DrawInfo struct in a new handler
+		PipelineComponent drawCall;
 	};
 
 	struct SGComputeJob
@@ -109,39 +85,84 @@ namespace SG
 		D3D11PipelineManager(ID3D11Device* device);
 		~D3D11PipelineManager();
 
-		SGResult CreateInputLayout(const SGGuid& guid, const SGGuid& vertexShaderGuid, const std::vector<SGInputElement>& inputElements);
 		SGResult CreateRenderJob(const SGGuid& guid, const SGRenderJob& job);
 		SGResult CreateComputeJob(const SGGuid& guid, const SGComputeJob& job);
 		SGResult CreateClearRenderTargetJob(const SGGuid& guid, const SGClearRenderTargetJob& job);
 		SGResult CreateClearDepthStencilJob(const SGGuid& guid, const SGClearDepthStencilJob& job);
 		SGResult CreatePipeline(const SGGuid& guid, const SGPipeline& pipeline);
 
-		SGRenderJob GetRenderJob(const SGGuid& guid);
-		SGComputeJob GetComputeJob(const SGGuid& guid);
-		SGClearRenderTargetJob GetClearRenderTargetJob(const SGGuid& guid);
-		SGClearDepthStencilJob GetClearDepthStencilJob(const SGGuid& guid);
-		SGPipeline GetPipeline(const SGGuid& guid);
-
+		SGResult CreateDrawCall(const SGGuid& guid, UINT vertexCount = 0, UINT startVertexLocation = 0);
+		SGResult CreateDrawIndexedCall(const SGGuid& guid, UINT indexCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0);
+		SGResult CreateDrawInstancedCall(const SGGuid& guid, UINT vertexCountPerInstance = 0, UINT instanceCount = 0, UINT startVertexLocation = 0, UINT startInstanceLocation = 0);
+		SGResult CreateDrawIndexedInstancedCall(const SGGuid& guid, UINT indexCountPerInstance = 0, UINT instanceCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0, UINT startInstanceLocation = 0);
 
 	private:
 
-		struct D3D11InputLayoutData
+		friend class D3D11RenderEngine;
+
+		enum class DrawType
 		{
-			ID3D11InputLayout* inputLayout = nullptr;
+			DRAW,
+			DRAW_INDEXED,
+			DRAW_INSTANCED,
+			DRAW_INDEXED_INSTANCED
+		};
+
+		struct DrawData
+		{
+			UINT vertexCount;
+			UINT startVertexLocation;
+		};
+
+		struct DrawIndexedData
+		{
+			UINT indexCount;
+			UINT startIndexLocation;
+			INT baseVertexLocation;
+		};
+
+		struct DrawInstancedData
+		{
+			UINT vertexCountPerInstance;
+			UINT instanceCount;
+			UINT startVertexLocation;
+			UINT startInstanceLocation;
+		};
+
+		struct DrawIndexedInstanced
+		{
+			UINT indexCountPerInstance;
+			UINT instanceCount;
+			UINT startIndexLocation;
+			INT  baseVertexLocation;
+			UINT startInstanceLocation;
 		};
 
 		struct DrawCall
 		{
-
+			DrawType type;
+			union
+			{
+				DrawData draw;
+				DrawIndexedData drawIndexed;
+				DrawInstancedData drawInstanced;
+				DrawIndexedInstanced drawIndexedInstanced;
+			} data;
 		};
 
-		LockableUnorderedMap<SGGuid, D3D11InputLayoutData> inputLayouts;
 		LockableUnorderedMap<SGGuid, SGRenderJob> renderJobs;
 		LockableUnorderedMap<SGGuid, SGComputeJob> computeJobs;
 		LockableUnorderedMap<SGGuid, SGClearRenderTargetJob> clearRenderTargetJobs;
 		LockableUnorderedMap<SGGuid, SGClearDepthStencilJob> clearDepthStencilJobs;
 		LockableUnorderedMap<SGGuid, SGPipeline> pipelines;
+		LockableUnorderedMap<SGGuid, DrawCall> drawCalls;
 
 		ID3D11Device* device;
+
+		SGRenderJob GetRenderJob(const SGGuid& guid);
+		SGComputeJob GetComputeJob(const SGGuid& guid);
+		SGClearRenderTargetJob GetClearRenderTargetJob(const SGGuid& guid);
+		SGClearDepthStencilJob GetClearDepthStencilJob(const SGGuid& guid);
+		SGPipeline GetPipeline(const SGGuid& guid);
 	};
 }

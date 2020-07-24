@@ -165,7 +165,6 @@
   <ItemGroup>
     <ClInclude Include="D3D11BufferHandler.h" />
     <ClInclude Include="D3D11CommonTypes.h" />
-    <ClInclude Include="D3D11DrawDataHandler.h" />
     <ClInclude Include="D3D11StateHandler.h" />
     <ClInclude Include="D3D11SamplerHandler.h" />
     <ClInclude Include="D3D11ShaderManager.h" />
@@ -179,12 +178,14 @@
     <ClInclude Include="D3D11PipelineManager.h" />
     <ClInclude Include="SGRenderEngine.h" />
     <ClInclude Include="SGThreadPool.h" />
+    <ClInclude Include="TripleBufferedData.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="D3D11BufferHandler.cpp" />
     <ClCompile Include="D3D11CommonTypes.cpp" />
     <ClCompile Include="D3D11PipelineManager.cpp" />
     <ClCompile Include="D3D11RenderEngine.cpp" />
+    <ClCompile Include="D3D11ShaderManager.cpp" />
     <ClCompile Include="D3D11TextureHandler.cpp" />
     <ClCompile Include="SGGuid.cpp" />
     <ClCompile Include="SGRenderEngine.cpp" />

@@ -9,6 +9,8 @@
 #include "SGGraphicalEntity.h"
 #include "SGGuid.h"
 #include "SGThreadPool.h"
+#include "SGResult.h"
+#include "LockableUnorderedMap.h"
 
 #if defined(_DEBUG) || defined(DEBUG)
 constexpr bool DEBUG_VERSION = true;
@@ -25,7 +27,6 @@ constexpr bool TREADEDSAFE_VERSION = false;
 namespace SG
 {
 	typedef std::vector<SGGraphicalEntity>::size_type SGGraphicalEntityID;
-	typedef std::vector<SGGraphicalEntity>::size_type SGGraphicalEntityGroupID;
 
 	struct SGBackBufferSettings
 	{
@@ -63,13 +64,17 @@ namespace SG
 
 		void Render(const std::vector<SGPipelineJob>& jobs);
 
+		SGGraphicalEntityID CreateEntity();
+		void SetEntityToGroup(const SGGraphicalEntityID& entity, const SGGuid& groupGuid);
+
 	protected:
 
 		void RenderThreadFunction();
 		virtual void SwapUpdateBuffer() = 0;
 		virtual void SwapToWorkWithBuffer() = 0;
-		virtual void HandleRenderJob(const std::vector<SGPipelineJob>& jobs) = 0;
+		virtual void ExecuteJobs(const std::vector<SGPipelineJob>& jobs) = 0;
 
+		std::mutex entityMutex;
 		std::vector<SGGraphicalEntity> graphicalEntities;
 		std::vector<SGPipelineJob> pipelineJobs[3];
 		std::mutex dataIndexMutex;

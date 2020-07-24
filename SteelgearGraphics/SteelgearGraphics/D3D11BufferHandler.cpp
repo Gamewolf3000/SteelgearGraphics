@@ -20,48 +20,75 @@ SG::SGResult SG::D3D11BufferHandler::BindBufferToEntity(const SGGraphicalEntityI
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11BufferHandler::BindBufferToGroup(const SGGuid & group, const SGGuid & bufferGuid, const SGGuid & bindGuid)
+{
+	groupData.lock();
+	groupData[group][bindGuid] = bufferGuid;
+	groupData.unlock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		buffers.lock();
+		if (buffers.find(bufferGuid) == buffers.end())
+		{
+			buffers.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		buffers.unlock();
+	}
+
+	return SGResult::OK;
+}
+
 void SG::D3D11BufferHandler::UpdateBuffer(const SGGuid & guid, const UpdateStrategy& updateStrategy, void * data, UINT subresource)
 {
-	dataIndexMutex.lock();
+	frameBufferMutex.lock();
 	buffers.lock();
-	UpdateData& temp = buffers[guid].UpdatedData[toUpdate];
+	UpdateData& temp = buffers[guid].updatedData.GetToUpdate();
 	memcpy(temp.data, data, temp.size);
 	temp.strategy = updateStrategy;
 	temp.subresource = subresource;
 	buffers.unlock();
-	updatedBuffers[toUpdate].push_back(guid); // måste låsa dataIndexMutex pga detta, expansion kan resultera i problem
-	dataIndexMutex.unlock();
+	updatedFrameBuffer.push_back(guid); // måste låsa frameBufferMutex pga detta, expansion kan resultera i problem
+	frameBufferMutex.unlock();
 }
 
 void SG::D3D11BufferHandler::SwapUpdateBuffer()
 {
 	// No need to lock since this function is called only by the render engine during certain conditions
-	std::swap(toUpdate, toUseNext);
-	updatedBuffers[toUpdate].clear();
+	for (auto& guid : updatedFrameBuffer)
+		buffers[guid].updatedData.SwitchUpdateBuffer();
+	
+	updatedTotalBuffer.insert(updatedTotalBuffer.end(), updatedFrameBuffer.begin(), updatedFrameBuffer.end());
 }
 
 void SG::D3D11BufferHandler::SwapToWorkWithBuffer()
 {
 	// No need to lock since this function is called only by the render engine during certain conditions
-	std::swap(toWorkWith, toUseNext);
+	for (auto& guid : updatedTotalBuffer)
+		buffers[guid].updatedData.SwitchActiveBuffer();
+
+	updatedTotalBuffer.clear();
 }
 
 void SG::D3D11BufferHandler::UpdateBuffers(ID3D11DeviceContext * context)
 {
+	//DEPRECATED FUNCTION, REPLACE WITH A FUNCTION THAT UPDATES A SINGLE BUFFER TO BE CALLED WHEN A BUFFER THAT IS TO BE USED IS DISCOVERED TO HAVE BEEN UPDATED
+	(void)context;
 	//gå igenom alla som finns i updatedBuffers[toWorkWith], borde inte behöva låsa index då detta kommer från renderingstråden som också är den enda som kan ändra på det?
-	for (auto& guid : updatedBuffers[toWorkWith])
-	{
-		D3D11_MAPPED_SUBRESOURCE mappedResource;
-		ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
-		buffers.lock();
-		D3D11BufferData& bData = buffers[guid];
-		buffers.unlock(); // Should be enough based on how an unordered_map works
-		UpdateData& uData = bData.UpdatedData[toWorkWith];
-		D3D11_MAP mapStrategy = (uData.strategy == UpdateStrategy::DISCARD ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE_NO_OVERWRITE);
-		context->Map(bData.buffer, uData.subresource, mapStrategy, 0, &mappedResource);
-		memcpy(mappedResource.pData, uData.data, uData.size);
-		context->Unmap(bData.buffer, uData.subresource);
-	}
+	//for (auto& guid : updatedBuffers[toWorkWith])
+	//{
+	//	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	//	ZeroMemory(&mappedResource, sizeof(D3D11_MAPPED_SUBRESOURCE));
+	//	buffers.lock();
+	//	D3D11BufferData& bData = buffers[guid];
+	//	buffers.unlock(); // Should be enough based on how an unordered_map works
+	//	UpdateData& uData = bData.UpdatedData[toWorkWith];
+	//	D3D11_MAP mapStrategy = (uData.strategy == UpdateStrategy::DISCARD ? D3D11_MAP_WRITE_DISCARD : D3D11_MAP_WRITE_NO_OVERWRITE);
+	//	context->Map(bData.buffer, uData.subresource, mapStrategy, 0, &mappedResource);
+	//	memcpy(mappedResource.pData, uData.data, uData.size);
+	//	context->Unmap(bData.buffer, uData.subresource);
+	//}
 }
 
 SG::D3D11BufferHandler::D3D11BufferHandler(ID3D11Device * device)
@@ -108,18 +135,13 @@ SG::SGResult SG::D3D11BufferHandler::CreateVertexBuffer(const SGGuid & guid, UIN
 	D3D11BufferData toStore;
 	toStore.type = BufferType::VERTEX_BUFFER;
 	toStore.specificData.vb.nrOfVertices = nrOfVertices;
-	
-	for (int i = 0; i < 3; ++i)
-	{
-		toStore.UpdatedData[i].size = size;
-		toStore.UpdatedData[i].data = new char[size];
-	}
+	toStore.updatedData = TripleBufferedData(UpdateData(size), UpdateData(size), UpdateData(size));
 
 	if (FAILED(device->CreateBuffer(&desc, &bufferData, &toStore.buffer)))
 		return SGResult::FAIL;
 
 	buffers.lock();
-	buffers[guid] = toStore;
+	buffers[guid] = std::move(toStore);
 	buffers.unlock();
 
 
@@ -151,18 +173,13 @@ SG::SGResult SG::D3D11BufferHandler::CreateIndexBuffer(const SGGuid & guid, UINT
 	D3D11BufferData toStore;
 	toStore.type = BufferType::INDEX_BUFFER;
 	toStore.specificData.vb.nrOfVertices = nrOfIndices;
-
-	for (int i = 0; i < 3; ++i)
-	{
-		toStore.UpdatedData[i].size = size;
-		toStore.UpdatedData[i].data = new char[size];
-	}
+	toStore.updatedData = TripleBufferedData(UpdateData(size), UpdateData(size), UpdateData(size));
 
 	if (FAILED(device->CreateBuffer(&desc, &bufferData, &toStore.buffer)))
 		return SGResult::FAIL;
 
 	buffers.lock();
-	buffers[guid] = toStore;
+	buffers[guid] = std::move(toStore);
 	buffers.unlock();
 
 	return SGResult::OK;
@@ -197,18 +214,13 @@ SG::SGResult SG::D3D11BufferHandler::CreateConstantBuffer(const SGGuid & guid, U
 
 	D3D11BufferData toStore;
 	toStore.type = BufferType::CONSTANT_BUFFER;
-
-	for (int i = 0; i < 3; ++i)
-	{
-		toStore.UpdatedData[i].size = size;
-		toStore.UpdatedData[i].data = new char[size];
-	}
+	toStore.updatedData = TripleBufferedData(UpdateData(size), UpdateData(size), UpdateData(size));
 
 	if (FAILED(device->CreateBuffer(&desc, &bufferData, &toStore.buffer)))
 		return SGResult::FAIL;
 
 	buffers.lock();
-	buffers[guid] = toStore;
+	buffers[guid] = std::move(toStore);
 	buffers.unlock();
 
 	return SGResult::OK;

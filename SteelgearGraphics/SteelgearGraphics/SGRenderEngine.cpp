@@ -18,6 +18,25 @@ void SG::SGRenderEngine::Render(const std::vector<SGPipelineJob>& jobs)
 	dataIndexMutex.unlock();
 }
 
+SG::SGGraphicalEntityID SG::SGRenderEngine::CreateEntity()
+{
+	SGGraphicalEntityID toReturn;
+	entityMutex.lock();
+	toReturn = graphicalEntities.size();
+	graphicalEntities.push_back(SGGraphicalEntity());
+	entityMutex.unlock();
+	return toReturn;
+}
+
+void SG::SGRenderEngine::SetEntityToGroup(const SGGraphicalEntityID & entity, const SGGuid & groupGuid)
+{
+	if constexpr (DEBUG_VERSION)
+		if (entity >= graphicalEntities.size())
+			throw std::runtime_error("Error setting entity to group, entity does not exist");
+
+	graphicalEntities[entity].groupGuid = groupGuid;
+}
+
 void SG::SGRenderEngine::RenderThreadFunction()
 {
 	renderthreadActive = true;
@@ -34,7 +53,7 @@ void SG::SGRenderEngine::RenderThreadFunction()
 		SwapToWorkWithBuffer();
 		dataIndexMutex.unlock();
 
-		HandleRenderJob(pipelineJobs[toWorkWith]);
+		ExecuteJobs(pipelineJobs[toWorkWith]);
 	}
 
 	renderthreadActive = false;
