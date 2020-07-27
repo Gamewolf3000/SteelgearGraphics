@@ -93,5 +93,6 @@
     <ClCompile Include="D3D11ShaderManager.cpp">
       <Filter>D3D11</Filter>
     </ClCompile>
+    <ClCompile Include="SGGraphicsHandler.cpp" />
   </ItemGroup>
 </Project>

@@ -228,8 +228,28 @@ void SG::D3D11RenderEngine::HandleRenderJob(const SGRenderJob & job, const std::
 	}
 }
 
+D3D11_PRIMITIVE_TOPOLOGY SG::D3D11RenderEngine::TranslateTopology(const SGTopology & topology)
+{
+	switch (topology)
+	{
+	case SGTopology::POINTLIST:
+		return D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+	case SGTopology::LINELIST:
+		return D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+	case SGTopology::LINESTRIP:
+		return D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP;
+	case SGTopology::TRIANGLELIST:
+		return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	case SGTopology::TRIANGLESTRIP:
+		return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+	default:
+		return D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+	}
+}
+
 void SG::D3D11RenderEngine::SetShaders(const SGRenderJob & job, ID3D11DeviceContext * context)
 {
+	context->IASetPrimitiveTopology(TranslateTopology(job.topology));
 	shaderManager->SetInputLayout(job.inputAssembly, context);
 	shaderManager->SetVertexShader(job.vertexShader.shader, context);
 	//hull
@@ -240,12 +260,53 @@ void SG::D3D11RenderEngine::SetShaders(const SGRenderJob & job, ID3D11DeviceCont
 
 void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
 {
-	(void)job;
-	(void)context;
 	for (auto& entity : entities)
 	{
-		(void)entity;
-		//bufferHandler->SetShaderResources(job, context, entity);
+		SetConstantBuffers(job, entity, context);
+	}
+}
+
+void SG::D3D11RenderEngine::SetConstantBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	const RenderShader& vs = job.vertexShader;
+	const RenderShader& hs = job.hullShader;
+	const RenderShader& ds = job.domainShader;
+	const RenderShader& gs = job.geometryShader;
+	const RenderShader& ps = job.pixelShader;
+	bufferHandler->SetConstantBuffers(vs.constantBuffers, hs.constantBuffers, ds.constantBuffers, gs.constantBuffers, ps.constantBuffers, context, graphicalEntities[entity].groupGuid, entity);
+}
+
+void SG::D3D11RenderEngine::SetVertexBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	const UINT arrSize = D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT;
+	ID3D11Buffer* bufferArr[arrSize] = {};
+	UINT strideArr[arrSize] = {};
+	UINT offsetArr[arrSize] = {};
+	UINT counter = 0;
+	for (auto& vBuffer : job.vertexBuffers)
+	{
+		switch (vBuffer.buffer.source)
+		{
+		case Association::GLOBAL:
+			bufferArr[counter++] = bufferHandler->GetBuffer(vBuffer.buffer.resourceGuid, context);
+			break;
+		case Association::GROUP:
+			entityMutex.lock();
+			SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+			bufferArr[counter++] = bufferHandler->GetBuffer(vBuffer.buffer.resourceGuid, context, groupGuid);
+			entityMutex.unlock();
+			break;
+		case Association::ENTITY:
+			entityMutex.lock();
+			bufferArr[counter++] = bufferHandler->GetBuffer(vBuffer.buffer.resourceGuid, context, entity);
+			entityMutex.unlock();
+			break;
+		}
+
+		// Bryt ut ovan till en egen funktion
+		// Lägg till funktionalitet i pipelinemanager för att kunna skapa offsets och strides
+		// Hämta offsets och strides i egna funktioner
+		// Sätt buffrarna
 	}
 }
 

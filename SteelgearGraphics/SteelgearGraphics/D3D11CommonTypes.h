@@ -17,7 +17,7 @@ namespace SG
 		ENTITY
 	};
 
-	struct ShaderResource
+	struct PipelineComponent
 	{
 		Association source;
 		SGGuid resourceGuid;

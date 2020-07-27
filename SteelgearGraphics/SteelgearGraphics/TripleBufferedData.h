@@ -178,14 +178,3 @@ inline void TripleBufferedData<T>::SwitchUpdateBuffer()
 	}
 	*/
 }
-
-// Behövs nog två vektorer vid updatering
-	// En som håller koll på alla som updaterats sedan senaste render callet
-		// För alla i den, när render kallas, byt updateringsbuffer
-		// Alla i denna läggs sedan till i den andra vektorn och denna clearas
-	// En som håller koll på alla som updaterats sedan senaste faktiska renderingen
-		// För alla i den, byt den aktiva buffern och cleara sedan
-
-// Ändra i handlerbasklassen/subklasserna så att liknande system finns där för entityData samt groupData (lägga till funktion i basklassen för just själva updateringen är nog enklast så kan den hantera vektorerna och sånt)
-// Gör om UpdateBuffers. Onödigt att updatera gpu sidan om den inte används. Istället, varje gång en buffer ska användas så kolla om den är updaterad, och i så fall updatera gpun
-// Fortsätt på HandleRenderJob

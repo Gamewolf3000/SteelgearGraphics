@@ -51,10 +51,14 @@ namespace SG
 		void HandlePipelineJobs(const std::vector<SGPipelineJob>& jobs, int startPos, int endPos, ID3D11DeviceContext* context);
 
 		void HandleRenderJob(const SGRenderJob& job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext* context);
+		D3D11_PRIMITIVE_TOPOLOGY TranslateTopology(const SGTopology& topology);
 		void SetShaders(const SGRenderJob& job, ID3D11DeviceContext* context);
-		void HandleGlobalRenderJob(const SGRenderJob& job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext* context);
+		void HandleGlobalRenderJob(const SGRenderJob& job, ID3D11DeviceContext* context);
 		void HandleGroupRenderJob(const SGRenderJob& job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext* context);
 		void HandleEntityRenderJob(const SGRenderJob& job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext* context);
+
+		void SetConstantBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetVertexBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 
 		void HandleClearRenderTargetJob(const SGClearRenderTargetJob& job, ID3D11DeviceContext* context);
 	};

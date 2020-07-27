@@ -253,6 +253,8 @@ void SG::D3D11TextureHandler::AddTexture2D(const SGGuid & guid, ID3D11Texture2D 
 void SG::D3D11TextureHandler::SwapUpdateBuffer()
 {
 	// No need to lock since this function is called only by the render engine during certain conditions
+	SGGraphicsHandler::SwapUpdateBuffer();
+	
 	for (auto& guid : updatedFrameBuffer)
 		textures[guid].updatedData.SwitchUpdateBuffer();
 
@@ -262,6 +264,8 @@ void SG::D3D11TextureHandler::SwapUpdateBuffer()
 void SG::D3D11TextureHandler::SwapToWorkWithBuffer()
 {
 	// No need to lock since this function is called only by the render engine during certain conditions
+	SGGraphicsHandler::SwapToWorkWithBuffer();
+	
 	for (auto& guid : updatedTotalBuffer)
 		textures[guid].updatedData.SwitchActiveBuffer();
 

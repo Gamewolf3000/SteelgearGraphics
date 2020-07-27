@@ -9,26 +9,50 @@
 
 namespace SG
 {
-	struct PipelineComponent
-	{
-		Association source;
-		SGGuid componentGuid;
-	};
-
 	struct RenderShader
 	{
 		SGGuid shader;
-		std::vector<ShaderResource> constantBuffers;
-		std::vector<ShaderResource> shaderResourceViews;
-		std::vector<ShaderResource> samplers;
+		std::vector<PipelineComponent> constantBuffers;
+		std::vector<PipelineComponent> shaderResourceViews;
+		std::vector<PipelineComponent> samplers;
+	};
+
+	struct SGVertexBuffer
+	{
+		PipelineComponent buffer;
+		PipelineComponent stride;
+		PipelineComponent offset;
+	};
+
+	enum class IndexBufferFormat
+	{
+		IB_32_BIT,
+		IB_16_BIT
+	};
+
+	struct SGIndexBuffer
+	{
+		PipelineComponent buffer;
+		PipelineComponent offset;
+		IndexBufferFormat format;
+	};
+
+	enum class SGTopology
+	{
+		POINTLIST,
+		LINELIST,
+		LINESTRIP,
+		TRIANGLELIST,
+		TRIANGLESTRIP
 	};
 
 	struct SGRenderJob
 	{
 		Association association;
+		SGTopology topology;
 		SGGuid inputAssembly;
-		std::vector<PipelineComponent> vertexBuffers;
-		PipelineComponent indexBuffer;
+		std::vector<SGVertexBuffer> vertexBuffers;
+		SGIndexBuffer indexBuffer;
 		RenderShader vertexShader;
 		RenderShader hullShader;
 		RenderShader domainShader;
@@ -45,10 +69,10 @@ namespace SG
 	{
 		Association association;
 		SGGuid shader;
-		std::vector<ShaderResource> constantBuffers;
-		std::vector<ShaderResource> shaderResourceViews;
-		std::vector<ShaderResource> samplers;
-		std::vector<ShaderResource> uavs;
+		std::vector<PipelineComponent> constantBuffers;
+		std::vector<PipelineComponent> shaderResourceViews;
+		std::vector<PipelineComponent> samplers;
+		std::vector<PipelineComponent> uavs;
 	};
 
 	struct SGClearRenderTargetJob

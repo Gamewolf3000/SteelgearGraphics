@@ -187,6 +187,7 @@
     <ClCompile Include="D3D11RenderEngine.cpp" />
     <ClCompile Include="D3D11ShaderManager.cpp" />
     <ClCompile Include="D3D11TextureHandler.cpp" />
+    <ClCompile Include="SGGraphicsHandler.cpp" />
     <ClCompile Include="SGGuid.cpp" />
     <ClCompile Include="SGRenderEngine.cpp" />
     <ClCompile Include="SGThreadPool.cpp" />

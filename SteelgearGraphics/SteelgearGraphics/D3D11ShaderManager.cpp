@@ -33,7 +33,7 @@ SG::D3D11ShaderManager::~D3D11ShaderManager()
 		ReleaseCOM(layout.second.inputLayout);
 }
 
-SG::SGResult SG::D3D11ShaderManager::CreateInputLayout(const SGGuid& guid, const std::vector<SGInputElement>& inputElements, const void* shaderByteCode, SIZE_T byteCodeLength)
+SG::SGResult SG::D3D11ShaderManager::CreateInputLayout(const SGGuid& guid, const std::vector<SGInputElement>& inputElements, const void* shaderByteCode, UINT byteCodeLength)
 {
 	std::vector<D3D11_INPUT_ELEMENT_DESC> d3d11InputElements;
 	d3d11InputElements.reserve(inputElements.size());
@@ -52,7 +52,7 @@ SG::SGResult SG::D3D11ShaderManager::CreateInputLayout(const SGGuid& guid, const
 	}
 
 	D3D11InputLayoutData toStore;
-	device->CreateInputLayout(&d3d11InputElements[0], d3d11InputElements.size(), shaderByteCode, byteCodeLength, &toStore.inputLayout);
+	device->CreateInputLayout(&d3d11InputElements[0], static_cast<UINT>(d3d11InputElements.size()), shaderByteCode, byteCodeLength, &toStore.inputLayout);
 
 	inputLayouts.lock();
 	inputLayouts[guid] = toStore;
