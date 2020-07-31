@@ -12,6 +12,7 @@
 #include "D3D11StateHandler.h"
 #include "D3D11TextureHandler.h"
 #include "D3D11PipelineManager.h"
+#include "D3D11DrawCallHandler.h"
 
 namespace SG
 {
@@ -26,6 +27,7 @@ namespace SG
 		D3D11ShaderManager* ShaderManager();
 		D3D11TextureHandler* TextureHandler();
 		D3D11PipelineManager* PipelineManager();
+		D3D11DrawCallHandler* DrawCallHandler();
 
 	private:
 		ID3D11Device* device = nullptr;
@@ -39,6 +41,7 @@ namespace SG
 		D3D11StateHandler* stateHandler;
 		D3D11TextureHandler* textureHandler;
 		D3D11PipelineManager* pipelineManager;
+		D3D11DrawCallHandler* drawCallHandler;
 
 		void CreateDeviceAndContext(const SGRenderSettings& settings);
 		void CreateSwapChain(const SGRenderSettings& settings);
@@ -59,6 +62,19 @@ namespace SG
 
 		void SetConstantBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetVertexBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetIndexBuffer(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetOMViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetViewports(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		ID3D11Buffer* GetBuffer(const PipelineComponent& component, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		UINT GetOffset(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		UINT GetStride(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		ID3D11RenderTargetView* GetRTV(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		ID3D11DepthStencilView* GetDSV(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		SG::D3D11DrawCallHandler::DrawCall GetDrawCall(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		D3D11_VIEWPORT GetViewport(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		UINT GetVertexCount(const SGRenderJob& job, UINT vertexCount, const SGGraphicalEntityID& entity);
+		UINT GetIndexCount(const SGRenderJob& job, UINT indexCount, const SGGraphicalEntityID& entity);
 
 		void HandleClearRenderTargetJob(const SGClearRenderTargetJob& job, ID3D11DeviceContext* context);
 	};

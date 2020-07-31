@@ -1,9 +1,11 @@
 #pragma once
 
+#include "SGGuid.h"
+
 namespace SG
 {
-	class SGGraphicalEntity
+	struct SGGraphicalEntity
 	{
-		unsigned int groupID = static_cast<unsigned int>(-1);
+		SGGuid groupGuid;
 	};
 }

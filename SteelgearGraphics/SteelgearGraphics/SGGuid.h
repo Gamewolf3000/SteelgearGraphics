@@ -20,6 +20,7 @@ namespace SG
 		~SGGuid();
 
 		bool operator==(const SGGuid& other) const;
+		bool operator!=(const SGGuid& other) const;
 
 		size_t GetID() const;
 	};

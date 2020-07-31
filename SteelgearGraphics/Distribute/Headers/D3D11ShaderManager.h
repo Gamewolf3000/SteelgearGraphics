@@ -1,16 +1,28 @@
 #pragma once
 
 #include <d3d11_4.h>
-#include <vector>
-#include <unordered_map>
+#include <string>
 
 #include "SGResult.h"
 #include "SGRenderEngine.h"
 #include "SGGuid.h"
+#include "LockableUnorderedMap.h"
+#include "D3D11CommonTypes.h"
 
 
 namespace SG
 {
+	struct SGInputElement
+	{
+		std::string semanticName;
+		UINT semanticIndex;
+		DXGI_FORMAT format;
+		UINT inputSlot;
+		UINT alignedByteOffset;
+		bool instancedData;
+		UINT instanceDataStepRate;
+	};
+
 	class D3D11ShaderManager
 	{
 	public:
@@ -18,6 +30,7 @@ namespace SG
 		D3D11ShaderManager(ID3D11Device* device);
 		~D3D11ShaderManager();
 
+		SGResult CreateInputLayout(const SGGuid& guid, const std::vector<SGInputElement>& inputElements, const void* shaderByteCode, UINT byteCodeLength);
 		SGResult CreateVertexShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
 		SGResult CreateHullShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
 		SGResult CreateDomainShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
@@ -25,6 +38,14 @@ namespace SG
 		SGResult CreatePixelShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
 
 	private:
+
+		friend class D3D11RenderEngine;
+
+		struct D3D11InputLayoutData
+		{
+			ID3D11InputLayout* inputLayout = nullptr;
+		};
+
 		enum class ShaderType
 		{
 			VERTEX_SHADER,
@@ -47,9 +68,13 @@ namespace SG
 			}shader;
 		};
 
-		std::unordered_map<SGGuid, D3D11ShaderData> shaders;
+		LockableUnorderedMap<SGGuid, D3D11InputLayoutData> inputLayouts;
+		LockableUnorderedMap<SGGuid, D3D11ShaderData> shaders;
 
 		ID3D11Device* device;
 
+		void SetInputLayout(const SGGuid& guid, ID3D11DeviceContext* context);
+		void SetVertexShader(const SGGuid& guid, ID3D11DeviceContext* context);
+		void SetPixelShader(const SGGuid& guid, ID3D11DeviceContext* context);
 	};
 }

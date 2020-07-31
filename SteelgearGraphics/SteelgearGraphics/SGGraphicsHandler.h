@@ -32,7 +32,7 @@ namespace SG
 		void UpdateEntity(const SGGraphicalEntityID & entity, const SGGuid & resourceGuid, const SGGuid & bindGuid);
 		void UpdateGroup(const SGGuid & group, const SGGuid & resourceGuid, const SGGuid & bindGuid);
 
-		virtual void SwapUpdateBuffer() = 0;
-		virtual void SwapToWorkWithBuffer() = 0;
+		virtual void SwapUpdateBuffer();
+		virtual void SwapToWorkWithBuffer();
 	};
 }

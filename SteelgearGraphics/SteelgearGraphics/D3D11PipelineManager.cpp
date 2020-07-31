@@ -35,68 +35,6 @@ SG::SGResult SG::D3D11PipelineManager::CreatePipeline(const SGGuid & guid, const
 	return SGResult::OK;
 }
 
-SG::SGResult SG::D3D11PipelineManager::CreateDrawCall(const SGGuid & guid, UINT vertexCount, UINT startVertexLocation)
-{
-	DrawCall toStore;
-	toStore.type = DrawType::DRAW;
-	toStore.data.draw.vertexCount = vertexCount;
-	toStore.data.draw.startVertexLocation = startVertexLocation;
-
-	drawCalls.lock();
-	drawCalls[guid] = toStore;
-	drawCalls.unlock();
-
-	return SGResult::OK;
-}
-
-SG::SGResult SG::D3D11PipelineManager::CreateDrawIndexedCall(const SGGuid & guid, UINT indexCount, UINT startIndexLocation, INT baseVertexLocation)
-{
-	DrawCall toStore;
-	toStore.type = DrawType::DRAW_INDEXED;
-	toStore.data.drawIndexed.indexCount = indexCount;
-	toStore.data.drawIndexed.startIndexLocation = startIndexLocation;
-	toStore.data.drawIndexed.baseVertexLocation = baseVertexLocation;
-
-	drawCalls.lock();
-	drawCalls[guid] = toStore;
-	drawCalls.unlock();
-
-	return SGResult::OK;
-}
-
-SG::SGResult SG::D3D11PipelineManager::CreateDrawInstancedCall(const SGGuid & guid, UINT vertexCountPerInstance, UINT instanceCount, UINT startVertexLocation, UINT startInstanceLocation)
-{
-	DrawCall toStore;
-	toStore.type = DrawType::DRAW_INSTANCED;
-	toStore.data.drawInstanced.vertexCountPerInstance = vertexCountPerInstance;
-	toStore.data.drawInstanced.instanceCount = instanceCount;
-	toStore.data.drawInstanced.startVertexLocation = startVertexLocation;
-	toStore.data.drawInstanced.startInstanceLocation = startInstanceLocation;
-
-	drawCalls.lock();
-	drawCalls[guid] = toStore;
-	drawCalls.unlock();
-
-	return SGResult::OK;
-}
-
-SG::SGResult SG::D3D11PipelineManager::CreateDrawIndexedInstancedCall(const SGGuid & guid, UINT indexCountPerInstance, UINT instanceCount, UINT startIndexLocation, INT baseVertexLocation, UINT startInstanceLocation)
-{
-	DrawCall toStore;
-	toStore.type = DrawType::DRAW_INDEXED_INSTANCED;
-	toStore.data.drawIndexedInstanced.indexCountPerInstance = indexCountPerInstance;
-	toStore.data.drawIndexedInstanced.instanceCount = instanceCount;
-	toStore.data.drawIndexedInstanced.startIndexLocation = startIndexLocation;
-	toStore.data.drawIndexedInstanced.baseVertexLocation = baseVertexLocation;
-	toStore.data.drawIndexedInstanced.startInstanceLocation = startInstanceLocation;
-
-	drawCalls.lock();
-	drawCalls[guid] = toStore;
-	drawCalls.unlock();
-
-	return SGResult::OK;
-}
-
 SG::SGRenderJob SG::D3D11PipelineManager::GetRenderJob(const SGGuid & guid)
 {
 	if constexpr (DEBUG_VERSION)

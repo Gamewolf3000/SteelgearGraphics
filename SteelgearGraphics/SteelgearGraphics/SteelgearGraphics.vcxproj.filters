@@ -64,6 +64,9 @@
     <ClInclude Include="TripleBufferedData.h">
       <Filter>Other</Filter>
     </ClInclude>
+    <ClInclude Include="D3D11DrawCallHandler.h">
+      <Filter>D3D11</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="D3D11PipelineManager.cpp">
@@ -93,6 +96,14 @@
     <ClCompile Include="D3D11ShaderManager.cpp">
       <Filter>D3D11</Filter>
     </ClCompile>
-    <ClCompile Include="SGGraphicsHandler.cpp" />
+    <ClCompile Include="D3D11DrawCallHandler.cpp">
+      <Filter>D3D11</Filter>
+    </ClCompile>
+    <ClCompile Include="SGGraphicsHandler.cpp">
+      <Filter>TopInterface</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11StateHandler.cpp">
+      <Filter>D3D11</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

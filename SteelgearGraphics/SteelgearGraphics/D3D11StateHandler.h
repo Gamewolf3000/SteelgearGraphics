@@ -6,6 +6,7 @@
 #include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
+#include "LockableUnorderedMap.h"
 
 
 namespace SG
@@ -106,8 +107,13 @@ namespace SG
 
 		SGResult CreateBlendData(const SGGuid& guid, const FLOAT blendFactor[4], UINT sampleMask);
 
+		SGResult BindViewportToEntity(const SGGraphicalEntityID& entity, const SGGuid& viewportGuid, const SGGuid& bindGuid);
+		SGResult BindViewportToGroup(const SGGuid& group, const SGGuid& viewportGuid, const SGGuid& bindGuid);
+
 
 	private:
+
+		friend class D3D11RenderEngine;
 
 		struct D3D11StateData
 		{
@@ -145,11 +151,14 @@ namespace SG
 			D3D11_VIEWPORT viewport;
 		};
 
-		std::unordered_map<SGGuid, D3D11StateData> states;
-		std::unordered_map<SGGuid, D3D11SetData> setData;
-		std::unordered_map<SGGuid, D3D11ViewportData> viewports;
+		LockableUnorderedMap<SGGuid, D3D11StateData> states;
+		LockableUnorderedMap<SGGuid, D3D11SetData> setData;
+		LockableUnorderedMap<SGGuid, D3D11ViewportData> viewports;
 
 		ID3D11Device* device;
 
+		const D3D11_VIEWPORT& GetViewport(const SGGuid& guid);
+		const D3D11_VIEWPORT& GetViewport(const SGGuid& guid, const SGGuid& groupGuid);
+		const D3D11_VIEWPORT& GetViewport(const SGGuid& guid, const SGGraphicalEntityID& entity);
 	};
 }

@@ -1,6 +1,11 @@
 #include "D3D11RenderEngine.h"
 #include "D3D11CommonTypes.h"
 
+//Klura ut problemet med att den ibland inte exitar korrekt från trådpolen
+//Fixa så det går att skapa och använda viewport
+//Lägg till cbuffer i testet och rendera kuben korrekt
+//Döp om vissa saker (statehandler till annat? Pipelinejob (som man skickar till render) till GraphicJob?)
+
 SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SGRenderEngine(settings)
 {
 	this->CreateDeviceAndContext(settings);
@@ -10,6 +15,7 @@ SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SG
 	//stateHandler;
 	this->textureHandler = new D3D11TextureHandler(device);
 	this->pipelineManager = new D3D11PipelineManager(device);
+	this->drawCallHandler = new D3D11DrawCallHandler(device);
 	this->CreateSwapChain(settings);
 }
 
@@ -52,6 +58,11 @@ SG::D3D11TextureHandler * SG::D3D11RenderEngine::TextureHandler()
 SG::D3D11PipelineManager * SG::D3D11RenderEngine::PipelineManager()
 {
 	return pipelineManager;
+}
+
+SG::D3D11DrawCallHandler * SG::D3D11RenderEngine::DrawCallHandler()
+{
+	return drawCallHandler;
 }
 
 void SG::D3D11RenderEngine::CreateDeviceAndContext(const SGRenderSettings & settings)
@@ -143,11 +154,7 @@ void SG::D3D11RenderEngine::SwapToWorkWithBuffer()
 
 void SG::D3D11RenderEngine::ExecuteJobs(const std::vector<SGPipelineJob>& jobs)
 {
-	//Simple way of doing the updates, can be improved
-	bufferHandler->UpdateBuffers(immediateContext);
-	//textureHandler->UpdateTextures(immediateContext);
-
-	unsigned int nrOfContexts = static_cast<unsigned int>(defferedContexts.size());
+	unsigned int nrOfContexts = static_cast<unsigned int>(jobs.size() < defferedContexts.size() ? jobs.size() : defferedContexts.size());
 	unsigned int jobsPerContext = static_cast<unsigned int>(jobs.size() / nrOfContexts);
 	size_t threadsToUse = (jobs.size() < nrOfContexts ? jobs.size() - 1 : nrOfContexts - 1);
 	std::vector<SG::FunctionStatus> statuses(threadsToUse);
@@ -263,11 +270,16 @@ void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const
 	for (auto& entity : entities)
 	{
 		SetConstantBuffers(job, entity, context);
+		SetVertexBuffers(job, entity, context);
+		SetIndexBuffer(job, entity, context);
+		SetOMViews(job, entity, context);
+		ExecuteDrawCall(job, entity, context);
 	}
 }
 
 void SG::D3D11RenderEngine::SetConstantBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
 {
+	//REDO LATER, WILL ONLY WORK IF THERE IS AN ENTITY, CHANGE SO IT WORKS SIMILARLY TO HOW SETVERTEXBUFFERS WORK
 	const RenderShader& vs = job.vertexShader;
 	const RenderShader& hs = job.hullShader;
 	const RenderShader& ds = job.domainShader;
@@ -285,29 +297,370 @@ void SG::D3D11RenderEngine::SetVertexBuffers(const SGRenderJob & job, const SGGr
 	UINT counter = 0;
 	for (auto& vBuffer : job.vertexBuffers)
 	{
-		switch (vBuffer.buffer.source)
-		{
-		case Association::GLOBAL:
-			bufferArr[counter++] = bufferHandler->GetBuffer(vBuffer.buffer.resourceGuid, context);
-			break;
-		case Association::GROUP:
-			entityMutex.lock();
-			SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
-			bufferArr[counter++] = bufferHandler->GetBuffer(vBuffer.buffer.resourceGuid, context, groupGuid);
-			entityMutex.unlock();
-			break;
-		case Association::ENTITY:
-			entityMutex.lock();
-			bufferArr[counter++] = bufferHandler->GetBuffer(vBuffer.buffer.resourceGuid, context, entity);
-			entityMutex.unlock();
-			break;
-		}
+		bufferArr[counter] = GetBuffer(vBuffer.buffer, entity, context);
 
-		// Bryt ut ovan till en egen funktion
-		// Lägg till funktionalitet i pipelinemanager för att kunna skapa offsets och strides
-		// Hämta offsets och strides i egna funktioner
-		// Sätt buffrarna
+		if (vBuffer.offset.resourceGuid != SGGuid())
+			offsetArr[counter] = GetOffset(vBuffer.offset, entity);
+
+		if (vBuffer.stride.resourceGuid != SGGuid())
+			strideArr[counter] = GetStride(vBuffer.stride, entity);
 	}
+
+	context->IASetVertexBuffers(0, arrSize, bufferArr, strideArr, offsetArr);
+}
+
+void SG::D3D11RenderEngine::SetIndexBuffer(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	ID3D11Buffer* buffer;
+	UINT offset = 0;
+
+	buffer = GetBuffer(job.indexBuffer.buffer, entity, context);
+
+	if (job.indexBuffer.offset.resourceGuid != SGGuid())
+		offset = GetOffset(job.indexBuffer.offset, entity);
+
+	DXGI_FORMAT format = job.indexBuffer.format == IndexBufferFormat::IB_32_BIT ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+
+	context->IASetIndexBuffer(buffer, format, offset);
+}
+
+void SG::D3D11RenderEngine::SetOMViews(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	const int maximumRTVsAndUAVs = 8;
+	ID3D11RenderTargetView* rtvs[maximumRTVsAndUAVs] = {};
+	ID3D11UnorderedAccessView* uavs[maximumRTVsAndUAVs] = {};
+	UINT nrOfRTVs = 0;
+	UINT nrOfUAVS = 0;
+	ID3D11DepthStencilView* dsv = nullptr;
+
+	for (auto& rtv : job.rtvs)
+		rtvs[nrOfRTVs++] = GetRTV(rtv, entity);
+
+	if(job.dsv.resourceGuid != SGGuid())
+		dsv = GetDSV(job.dsv, entity);
+
+	//UAVs
+
+	context->OMSetRenderTargetsAndUnorderedAccessViews(nrOfRTVs, rtvs, dsv, nrOfRTVs, nrOfUAVS, uavs, nullptr);
+}
+
+void SG::D3D11RenderEngine::SetViewports(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	D3D11_VIEWPORT viewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+	UINT nrOfViewports = 0;
+
+	for (auto& vp : job.viewports)
+		viewports[nrOfViewports++] = GetViewport(vp, entity);
+
+	context->RSSetViewports(nrOfViewports, viewports);
+}
+
+void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	SG::D3D11DrawCallHandler::DrawCall drawCall = GetDrawCall(job.drawCall, entity);
+
+	switch (drawCall.type)
+	{
+	case SG::D3D11DrawCallHandler::DrawType::DRAW:
+		context->Draw(GetVertexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.draw.startVertexLocation);
+		break;
+	case SG::D3D11DrawCallHandler::DrawType::DRAW_INDEXED:
+		context->DrawIndexed(GetIndexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.drawIndexed.startIndexLocation, drawCall.data.drawIndexed.baseVertexLocation);
+		break;
+	case SG::D3D11DrawCallHandler::DrawType::DRAW_INSTANCED:
+		// FIX LATER
+		break;
+	case SG::D3D11DrawCallHandler::DrawType::DRAW_INDEXED_INSTANCED:
+		// FIX LATER
+		break;
+	}
+
+}
+
+ID3D11Buffer * SG::D3D11RenderEngine::GetBuffer(const PipelineComponent & component, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	ID3D11Buffer* toReturn = nullptr;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = bufferHandler->GetBuffer(component.resourceGuid, context);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = bufferHandler->GetBuffer(component.resourceGuid, context, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = bufferHandler->GetBuffer(component.resourceGuid, context, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+UINT SG::D3D11RenderEngine::GetOffset(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	UINT toReturn = 0;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = bufferHandler->GetOffset(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = bufferHandler->GetOffset(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = bufferHandler->GetOffset(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+UINT SG::D3D11RenderEngine::GetStride(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	UINT toReturn = 0;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = bufferHandler->GetStride(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = bufferHandler->GetStride(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = bufferHandler->GetStride(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+ID3D11RenderTargetView* SG::D3D11RenderEngine::GetRTV(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	ID3D11RenderTargetView* toReturn = nullptr;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = textureHandler->GetRTV(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = textureHandler->GetRTV(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = textureHandler->GetRTV(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+ID3D11DepthStencilView * SG::D3D11RenderEngine::GetDSV(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	ID3D11DepthStencilView* toReturn = nullptr;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = textureHandler->GetDSV(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = textureHandler->GetDSV(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = textureHandler->GetDSV(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+SG::D3D11DrawCallHandler::DrawCall SG::D3D11RenderEngine::GetDrawCall(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	SG::D3D11DrawCallHandler::DrawCall toReturn;
+
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = drawCallHandler->GetDrawCall(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = drawCallHandler->GetDrawCall(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = drawCallHandler->GetDrawCall(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	default:
+		throw std::runtime_error("Error, this error should never happen, because it implies that an association that does not exist has been used for a drawcall");
+	}
+
+	return toReturn;
+}
+
+D3D11_VIEWPORT SG::D3D11RenderEngine::GetViewport(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	D3D11_VIEWPORT toReturn;
+
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = stateHandler->GetViewport(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = stateHandler->GetViewport(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = stateHandler->GetViewport(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+UINT SG::D3D11RenderEngine::GetVertexCount(const SGRenderJob & job, UINT vertexCount, const SGGraphicalEntityID & entity)
+{
+	if (vertexCount < DrawCallVertexBufferToFetchFrom::BUFFER14)
+		return vertexCount;
+
+	UINT index = (vertexCount - DrawCallVertexBufferToFetchFrom::BUFFER0);
+
+	UINT toReturn = 0;
+	const PipelineComponent& buffer = job.vertexBuffers[index].buffer;
+
+	switch (buffer.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = bufferHandler->GetElementCount(buffer.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = bufferHandler->GetElementCount(buffer.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = bufferHandler->GetElementCount(buffer.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+UINT SG::D3D11RenderEngine::GetIndexCount(const SGRenderJob & job, UINT indexCount, const SGGraphicalEntityID & entity)
+{
+	if (indexCount != 0)
+		return indexCount;
+
+	UINT toReturn = 0;
+	const PipelineComponent& buffer = job.indexBuffer.buffer;
+
+	switch (buffer.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = bufferHandler->GetElementCount(buffer.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = bufferHandler->GetElementCount(buffer.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = bufferHandler->GetElementCount(buffer.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
 }
 
 void SG::D3D11RenderEngine::HandleClearRenderTargetJob(const SGClearRenderTargetJob & job, ID3D11DeviceContext * context)

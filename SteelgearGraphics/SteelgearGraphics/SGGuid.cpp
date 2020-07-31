@@ -32,6 +32,12 @@ namespace SG
 	{
 		return myID == other.myID;
 	}
+
+	bool SGGuid::operator!=(const SGGuid & other) const
+	{
+		return myID != other.myID;
+	}
+
 	size_t SGGuid::GetID() const
 	{
 		return myID;

@@ -107,7 +107,7 @@ void SG::D3D11ShaderManager::SetInputLayout(const SGGuid & guid, ID3D11DeviceCon
 
 	context->IASetInputLayout(inputLayouts[guid].inputLayout);
 
-	shaders.unlock();
+	inputLayouts.unlock();
 }
 
 void SG::D3D11ShaderManager::SetVertexShader(const SGGuid & guid, ID3D11DeviceContext * context)

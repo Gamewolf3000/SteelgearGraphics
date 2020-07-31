@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 #include "SGGraphicalEntity.h"
 #include "SGGuid.h"
@@ -82,7 +83,7 @@ namespace SG
 		int toUseNext = 1;
 		int toUpdate = 2;
 		SGThreadPool* threadPool;
-		volatile bool engineActive = true;
-		volatile bool renderthreadActive = false;
+		std::atomic<bool> engineActive = true;
+		std::atomic<bool> renderthreadActive = false;
 	};
 }

@@ -291,6 +291,133 @@ ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid)
 	return toReturn;
 }
 
+ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	views.lock();
+	groupData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if(groupData.find(groupGuid) == groupData.end())
+			throw std::runtime_error("Error fetching rtv, group does not exist");
+
+		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+			throw std::runtime_error("Error fetching rtv, group does not have the guid");
+
+		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+			throw std::runtime_error("Error fetching rtv, guid does not exist");
+
+		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::RTV)
+			throw std::runtime_error("Error fetching rtv, guid does not match an rtv");
+	}
+
+	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.rtv;
+	groupData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	views.lock();
+	entityData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (entityData.find(entity) == entityData.end())
+			throw std::runtime_error("Error fetching rtv, group does not exist");
+
+		if (entityData[entity].find(guid) == entityData[entity].end())
+			throw std::runtime_error("Error fetching rtv, group does not have the guid");
+
+		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+			throw std::runtime_error("Error fetching rtv, guid does not exist");
+
+		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::RTV)
+			throw std::runtime_error("Error fetching rtv, guid does not match an rtv");
+	}
+
+	auto toReturn = views[entityData[entity][guid].GetActive()].view.rtv;
+	entityData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11DepthStencilView * SG::D3D11TextureHandler::GetDSV(const SGGuid & guid)
+{
+	views.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (views.find(guid) == views.end())
+			throw std::runtime_error("Error fetching dsv, guid does not exist");
+
+		if (views[guid].type != ResourceViewType::DSV)
+			throw std::runtime_error("Error fetching dsv, guid does not match a dsv");
+	}
+
+	auto toReturn = views[guid].view.dsv;
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11DepthStencilView * SG::D3D11TextureHandler::GetDSV(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	views.lock();
+	groupData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (groupData.find(groupGuid) == groupData.end())
+			throw std::runtime_error("Error fetching dsv, group does not exist");
+
+		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+			throw std::runtime_error("Error fetching dsv, group does not have the guid");
+
+		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+			throw std::runtime_error("Error fetching dsv, guid does not exist");
+
+		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::RTV)
+			throw std::runtime_error("Error fetching dsv, guid does not match a dsv");
+	}
+
+	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.dsv;
+	groupData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11DepthStencilView * SG::D3D11TextureHandler::GetDSV(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	views.lock();
+	entityData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (entityData.find(entity) == entityData.end())
+			throw std::runtime_error("Error fetching dsv, group does not exist");
+
+		if (entityData[entity].find(guid) == entityData[entity].end())
+			throw std::runtime_error("Error fetching dsv, group does not have the guid");
+
+		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+			throw std::runtime_error("Error fetching dsv, guid does not exist");
+
+		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::RTV)
+			throw std::runtime_error("Error fetching dsv, guid does not match an dsv");
+	}
+
+	auto toReturn = views[entityData[entity][guid].GetActive()].view.dsv;
+	entityData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
 void SG::D3D11TextureHandler::SetUsageAndCPUAccessFlags(const SGTextureData & generalSettings, D3D11_USAGE & usage, UINT & cpuAccessFlags)
 {
 	if (!generalSettings.cpuWritable && !generalSettings.cpuReadable && !generalSettings.gpuWritable)

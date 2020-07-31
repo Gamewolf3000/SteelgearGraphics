@@ -114,5 +114,11 @@ namespace SG
 		void SwapToWorkWithBuffer();
 
 		ID3D11RenderTargetView* GetRTV(const SGGuid& guid);
+		ID3D11RenderTargetView* GetRTV(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11RenderTargetView* GetRTV(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		ID3D11DepthStencilView* GetDSV(const SGGuid& guid);
+		ID3D11DepthStencilView* GetDSV(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11DepthStencilView* GetDSV(const SGGuid& guid, const SGGraphicalEntityID& entity);
 	};
 }

@@ -20,6 +20,7 @@ public:
 	TripleBufferedData(T&& t1, T&& t2, T&& t3);
 	const TripleBufferedData<T>& operator=(const T& data);
 	const TripleBufferedData<T>& operator=(TripleBufferedData<T>&& other);
+	~TripleBufferedData();
 
 	bool Updated();
 	void MarkAsNotUpdated();
@@ -71,6 +72,12 @@ inline const TripleBufferedData<T>& TripleBufferedData<T>::operator=(TripleBuffe
 		this->storedData[i] = std::move(other.storedData[i]);
 
 	return *this;
+}
+
+template<class T>
+inline TripleBufferedData<T>::~TripleBufferedData()
+{
+	// EMPTY
 }
 
 template<class T>

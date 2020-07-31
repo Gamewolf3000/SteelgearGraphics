@@ -25,6 +25,10 @@ namespace SG
 		SGResult CreateByteAdressBuffer(const SGGuid& guid, UINT size, bool gpuWritable, void* data);
 		SGResult CreateIndirectArgsBuffer(const SGGuid& guid, UINT size, void* data);
 
+		SGResult CreateBufferOffset(const SGGuid& guid, UINT value);
+		SGResult CreateBufferStride(const SGGuid& guid, UINT value);
+
+
 		/**
 			bufferGuid is the BufferData to create a SRV for
 		*/
@@ -37,6 +41,11 @@ namespace SG
 
 		SGResult BindBufferToEntity(const SGGraphicalEntityID& entity, const SGGuid& bufferGuid, const SGGuid& bindGuid);
 		SGResult BindBufferToGroup(const SGGuid& group, const SGGuid& bufferGuid, const SGGuid& bindGuid);
+
+		SGResult BindOffsetToEntity(const SGGraphicalEntityID& entity, const SGGuid& offsetGuid, const SGGuid& bindGuid);
+		SGResult BindOffsetToGroup(const SGGuid& group, const SGGuid& offsetGuid, const SGGuid& bindGuid);
+		SGResult BindStrideToEntity(const SGGraphicalEntityID& entity, const SGGuid& strideGuid, const SGGuid& bindGuid);
+		SGResult BindStrideToGroup(const SGGuid& group, const SGGuid& strideGuid, const SGGuid& bindGuid);
 
 		void UpdateBuffer(const SGGuid& guid, const UpdateStrategy& updateStrategy, void* data, UINT subresource = 0);
 
@@ -81,6 +90,8 @@ namespace SG
 
 		LockableUnorderedMap<SGGuid, D3D11BufferData> buffers;
 		LockableUnorderedMap<SGGuid, D3D11ResourceViewData> views;
+		LockableUnorderedMap<SGGuid, UINT> bufferOffsets;
+		LockableUnorderedMap<SGGuid, UINT> bufferStrides;
 
 		std::mutex frameBufferMutex;
 		std::vector<SGGuid> updatedFrameBuffer;
@@ -90,7 +101,6 @@ namespace SG
 
 		void SwapUpdateBuffer() override;
 		void SwapToWorkWithBuffer() override;
-		void UpdateBuffers(ID3D11DeviceContext* context);
 
 		void SetConstantBuffers(const std::vector<PipelineComponent>& vs, const std::vector<PipelineComponent>& hs, const std::vector<PipelineComponent>& ds, const std::vector<PipelineComponent>& gs, const std::vector<PipelineComponent>& ps, ID3D11DeviceContext* context, const SGGuid& groupGuid = SGGuid(), const SGGraphicalEntityID& entity = SGGraphicalEntityID());
 		void FillBufferArray(const std::vector<PipelineComponent>& resources, ID3D11Buffer ** bufferArr, unsigned int arrSize, ID3D11DeviceContext* context, const SGGuid& groupGuid, const SGGraphicalEntityID& entity);
@@ -99,5 +109,17 @@ namespace SG
 		ID3D11Buffer* GetBuffer(const SGGuid& guid, ID3D11DeviceContext* context);
 		ID3D11Buffer* GetBuffer(const SGGuid& guid, ID3D11DeviceContext* context, const SGGuid& groupGuid);
 		ID3D11Buffer* GetBuffer(const SGGuid& guid, ID3D11DeviceContext* context, const SGGraphicalEntityID& entity);
+
+		UINT GetOffset(const SGGuid& guid);
+		UINT GetOffset(const SGGuid& guid, const SGGuid& groupGuid);
+		UINT GetOffset(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		UINT GetStride(const SGGuid& guid);
+		UINT GetStride(const SGGuid& guid, const SGGuid& groupGuid);
+		UINT GetStride(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		UINT GetElementCount(const SGGuid& guid);
+		UINT GetElementCount(const SGGuid& guid, const SGGuid& groupGuid);
+		UINT GetElementCount(const SGGuid& guid, const SGGraphicalEntityID& entity);
 	};
 }

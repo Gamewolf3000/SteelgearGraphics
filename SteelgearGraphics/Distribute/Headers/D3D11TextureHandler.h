@@ -5,6 +5,7 @@
 #include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
+#include "TripleBufferedData.h"
 
 namespace SG
 {
@@ -58,19 +59,13 @@ namespace SG
 		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice);
 		SGResult CreateDSVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
-
-
-		void AddTexture2D(const SGGuid& guid, ID3D11Texture2D* texture);
-
-		void SwapUpdateBuffer();
-		void SwapToWorkWithBuffer();
-
-
-
-		ID3D11RenderTargetView* GetRTV(const SGGuid& guid);
-
+		SGResult BindTextureToEntity(const SGGraphicalEntityID& entity, const SGGuid& textureGuid, const SGGuid& bindGuid);
+		SGResult BindTextureToGroup(const SGGuid& group, const SGGuid& textureGuid, const SGGuid& bindGuid);
 
 	private:
+
+		friend class D3D11RenderEngine;
+
 		enum class TextureType
 		{
 			TEXTURE_1D,
@@ -94,16 +89,15 @@ namespace SG
 				ID3D11Texture2D* texture2D;
 				ID3D11Texture3D* texture3D;
 			} texture;
-			std::pair<ResourceData, UpdateStrategy> UpdatedData[3];
+			TripleBufferedData<UpdateData> updatedData;
 		};
 
 
 		LockableUnorderedMap<SGGuid, D3D11TextureData> textures;
 		LockableUnorderedMap<SGGuid, D3D11ResourceViewData> views;
 
-		int toWorkWith = 0;
-		int toUseNext = 1;
-		int toUpdate = 2;
+		std::vector<SGGuid> updatedFrameBuffer;
+		std::vector<SGGuid> updatedTotalBuffer;
 
 		ID3D11Device* device;
 
@@ -111,5 +105,20 @@ namespace SG
 		void SetBindflags(const SGTextureData & generalSettings, UINT& flags);
 		D3D11_RTV_DIMENSION GetRTVDimension(TextureType type);
 		D3D11_DSV_DIMENSION GetDSVDimension(TextureType type);
+
+
+
+		void AddTexture2D(const SGGuid& guid, ID3D11Texture2D* texture);
+
+		void SwapUpdateBuffer();
+		void SwapToWorkWithBuffer();
+
+		ID3D11RenderTargetView* GetRTV(const SGGuid& guid);
+		ID3D11RenderTargetView* GetRTV(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11RenderTargetView* GetRTV(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		ID3D11DepthStencilView* GetDSV(const SGGuid& guid);
+		ID3D11DepthStencilView* GetDSV(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11DepthStencilView* GetDSV(const SGGuid& guid, const SGGraphicalEntityID& entity);
 	};
 }

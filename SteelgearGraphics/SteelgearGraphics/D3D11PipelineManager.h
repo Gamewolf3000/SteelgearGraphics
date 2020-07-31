@@ -34,7 +34,7 @@ namespace SG
 	{
 		PipelineComponent buffer;
 		PipelineComponent offset;
-		IndexBufferFormat format;
+		IndexBufferFormat format = IndexBufferFormat::IB_32_BIT;
 	};
 
 	enum class SGTopology
@@ -60,6 +60,7 @@ namespace SG
 		RenderShader pixelShader;
 		std::vector<PipelineComponent> uavs;
 		std::vector<PipelineComponent> rtvs;
+		std::vector<PipelineComponent> viewports;
 		PipelineComponent dsv;
 		PipelineComponent blendState;
 		PipelineComponent drawCall;
@@ -115,71 +116,17 @@ namespace SG
 		SGResult CreateClearDepthStencilJob(const SGGuid& guid, const SGClearDepthStencilJob& job);
 		SGResult CreatePipeline(const SGGuid& guid, const SGPipeline& pipeline);
 
-		SGResult CreateDrawCall(const SGGuid& guid, UINT vertexCount = 0, UINT startVertexLocation = 0);
-		SGResult CreateDrawIndexedCall(const SGGuid& guid, UINT indexCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0);
-		SGResult CreateDrawInstancedCall(const SGGuid& guid, UINT vertexCountPerInstance = 0, UINT instanceCount = 0, UINT startVertexLocation = 0, UINT startInstanceLocation = 0);
-		SGResult CreateDrawIndexedInstancedCall(const SGGuid& guid, UINT indexCountPerInstance = 0, UINT instanceCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0, UINT startInstanceLocation = 0);
-
 	private:
 
 		friend class D3D11RenderEngine;
 
-		enum class DrawType
-		{
-			DRAW,
-			DRAW_INDEXED,
-			DRAW_INSTANCED,
-			DRAW_INDEXED_INSTANCED
-		};
 
-		struct DrawData
-		{
-			UINT vertexCount;
-			UINT startVertexLocation;
-		};
-
-		struct DrawIndexedData
-		{
-			UINT indexCount;
-			UINT startIndexLocation;
-			INT baseVertexLocation;
-		};
-
-		struct DrawInstancedData
-		{
-			UINT vertexCountPerInstance;
-			UINT instanceCount;
-			UINT startVertexLocation;
-			UINT startInstanceLocation;
-		};
-
-		struct DrawIndexedInstanced
-		{
-			UINT indexCountPerInstance;
-			UINT instanceCount;
-			UINT startIndexLocation;
-			INT  baseVertexLocation;
-			UINT startInstanceLocation;
-		};
-
-		struct DrawCall
-		{
-			DrawType type;
-			union
-			{
-				DrawData draw;
-				DrawIndexedData drawIndexed;
-				DrawInstancedData drawInstanced;
-				DrawIndexedInstanced drawIndexedInstanced;
-			} data;
-		};
 
 		LockableUnorderedMap<SGGuid, SGRenderJob> renderJobs;
 		LockableUnorderedMap<SGGuid, SGComputeJob> computeJobs;
 		LockableUnorderedMap<SGGuid, SGClearRenderTargetJob> clearRenderTargetJobs;
 		LockableUnorderedMap<SGGuid, SGClearDepthStencilJob> clearDepthStencilJobs;
 		LockableUnorderedMap<SGGuid, SGPipeline> pipelines;
-		LockableUnorderedMap<SGGuid, DrawCall> drawCalls;
 
 		ID3D11Device* device;
 
