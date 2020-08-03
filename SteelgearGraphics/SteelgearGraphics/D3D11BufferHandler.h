@@ -102,8 +102,8 @@ namespace SG
 		void SwapUpdateBuffer() override;
 		void SwapToWorkWithBuffer() override;
 
-		void SetConstantBuffers(const std::vector<PipelineComponent>& vs, const std::vector<PipelineComponent>& hs, const std::vector<PipelineComponent>& ds, const std::vector<PipelineComponent>& gs, const std::vector<PipelineComponent>& ps, ID3D11DeviceContext* context, const SGGuid& groupGuid = SGGuid(), const SGGraphicalEntityID& entity = SGGraphicalEntityID());
-		void FillBufferArray(const std::vector<PipelineComponent>& resources, ID3D11Buffer ** bufferArr, unsigned int arrSize, ID3D11DeviceContext* context, const SGGuid& groupGuid, const SGGraphicalEntityID& entity);
+		//void SetConstantBuffers(const std::vector<PipelineComponent>& vs, const std::vector<PipelineComponent>& hs, const std::vector<PipelineComponent>& ds, const std::vector<PipelineComponent>& gs, const std::vector<PipelineComponent>& ps, ID3D11DeviceContext* context, const SGGuid& groupGuid = SGGuid(), const SGGraphicalEntityID& entity = SGGraphicalEntityID());
+		//void FillBufferArray(const std::vector<PipelineComponent>& resources, ID3D11Buffer ** bufferArr, unsigned int arrSize, ID3D11DeviceContext* context, const SGGuid& groupGuid, const SGGraphicalEntityID& entity);
 		void UpdateBufferGPU(D3D11BufferData& toUpdate, ID3D11DeviceContext* context);
 
 		ID3D11Buffer* GetBuffer(const SGGuid& guid, ID3D11DeviceContext* context);

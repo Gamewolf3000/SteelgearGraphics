@@ -12,7 +12,7 @@ SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SG
 	bufferHandler = new D3D11BufferHandler(device);
 	//samplerHandler;
 	shaderManager = new D3D11ShaderManager(device);
-	//stateHandler;
+	this->stateHandler = new D3D11StateHandler(device);
 	this->textureHandler = new D3D11TextureHandler(device);
 	this->pipelineManager = new D3D11PipelineManager(device);
 	this->drawCallHandler = new D3D11DrawCallHandler(device);
@@ -48,6 +48,11 @@ SG::D3D11BufferHandler * SG::D3D11RenderEngine::BufferHandler()
 SG::D3D11ShaderManager * SG::D3D11RenderEngine::ShaderManager()
 {
 	return shaderManager;
+}
+
+SG::D3D11StateHandler * SG::D3D11RenderEngine::StateHandler()
+{
+	return stateHandler;
 }
 
 SG::D3D11TextureHandler * SG::D3D11RenderEngine::TextureHandler()
@@ -152,7 +157,7 @@ void SG::D3D11RenderEngine::SwapToWorkWithBuffer()
 	textureHandler->SwapToWorkWithBuffer();
 }
 
-void SG::D3D11RenderEngine::ExecuteJobs(const std::vector<SGPipelineJob>& jobs)
+void SG::D3D11RenderEngine::ExecuteJobs(const std::vector<SGGraphicsJob>& jobs)
 {
 	unsigned int nrOfContexts = static_cast<unsigned int>(jobs.size() < defferedContexts.size() ? jobs.size() : defferedContexts.size());
 	unsigned int jobsPerContext = static_cast<unsigned int>(jobs.size() / nrOfContexts);
@@ -195,7 +200,7 @@ void SG::D3D11RenderEngine::ExecuteJobs(const std::vector<SGPipelineJob>& jobs)
 	swapChain->Present(0, 0);
 }
 
-void SG::D3D11RenderEngine::HandlePipelineJobs(const std::vector<SGPipelineJob>& jobs, int startPos, int endPos, ID3D11DeviceContext * context)
+void SG::D3D11RenderEngine::HandlePipelineJobs(const std::vector<SGGraphicsJob>& jobs, int startPos, int endPos, ID3D11DeviceContext * context)
 {
 	for (int i = startPos; i < endPos; ++i)
 	{
@@ -211,6 +216,8 @@ void SG::D3D11RenderEngine::HandlePipelineJobs(const std::vector<SGPipelineJob>&
 			case PipelineJobType::CLEAR_RENDER_TARGET:
 				HandleClearRenderTargetJob(pipelineManager->GetClearRenderTargetJob(job.second), context);
 				break;
+			case PipelineJobType::CLEAR_DEPTH_STENCIL:
+				HandleClearDepthStencilJob(pipelineManager->GetClearDepthStencilJob(job.second), context);
 			}
 		}
 
@@ -279,13 +286,11 @@ void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const
 
 void SG::D3D11RenderEngine::SetConstantBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
 {
-	//REDO LATER, WILL ONLY WORK IF THERE IS AN ENTITY, CHANGE SO IT WORKS SIMILARLY TO HOW SETVERTEXBUFFERS WORK
-	const RenderShader& vs = job.vertexShader;
-	const RenderShader& hs = job.hullShader;
-	const RenderShader& ds = job.domainShader;
-	const RenderShader& gs = job.geometryShader;
-	const RenderShader& ps = job.pixelShader;
-	bufferHandler->SetConstantBuffers(vs.constantBuffers, hs.constantBuffers, ds.constantBuffers, gs.constantBuffers, ps.constantBuffers, context, graphicalEntities[entity].groupGuid, entity);
+	SetConstantBuffersForShader(job.vertexShader.constantBuffers, entity, context, &ID3D11DeviceContext::VSSetConstantBuffers);
+	SetConstantBuffersForShader(job.hullShader.constantBuffers, entity, context, &ID3D11DeviceContext::HSSetConstantBuffers);
+	SetConstantBuffersForShader(job.domainShader.constantBuffers, entity, context, &ID3D11DeviceContext::DSSetConstantBuffers);
+	SetConstantBuffersForShader(job.geometryShader.constantBuffers, entity, context, &ID3D11DeviceContext::GSSetConstantBuffers);
+	SetConstantBuffersForShader(job.pixelShader.constantBuffers, entity, context, &ID3D11DeviceContext::PSSetConstantBuffers);
 }
 
 void SG::D3D11RenderEngine::SetVertexBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
@@ -375,6 +380,17 @@ void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGra
 		break;
 	}
 
+}
+
+void SG::D3D11RenderEngine::SetConstantBuffersForShader(const std::vector<PipelineComponent>& buffers, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer * const *))
+{
+	const UINT arrSize = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
+	ID3D11Buffer* bufferArr[arrSize] = {};
+	UINT counter = 0;
+	for (auto& cBuffer : buffers)
+		bufferArr[counter] = GetBuffer(cBuffer, entity, context);
+
+	(context->*func)(0, arrSize, bufferArr);
 }
 
 ID3D11Buffer * SG::D3D11RenderEngine::GetBuffer(const PipelineComponent & component, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
@@ -562,7 +578,7 @@ SG::D3D11DrawCallHandler::DrawCall SG::D3D11RenderEngine::GetDrawCall(const Pipe
 
 D3D11_VIEWPORT SG::D3D11RenderEngine::GetViewport(const PipelineComponent & component, const SGGraphicalEntityID & entity)
 {
-	D3D11_VIEWPORT toReturn;
+	D3D11_VIEWPORT toReturn = D3D11_VIEWPORT();
 
 	switch (component.source)
 	{
@@ -667,4 +683,11 @@ void SG::D3D11RenderEngine::HandleClearRenderTargetJob(const SGClearRenderTarget
 {
 	ID3D11RenderTargetView* rtv = textureHandler->GetRTV(job.toClear);
 	context->ClearRenderTargetView(rtv, job.color);
+}
+
+void SG::D3D11RenderEngine::HandleClearDepthStencilJob(const SGClearDepthStencilJob & job, ID3D11DeviceContext * context)
+{
+	ID3D11DepthStencilView* dsv = textureHandler->GetDSV(job.toClear);
+	UINT clearFlags = 0 | (job.clearDepth ? D3D11_CLEAR_DEPTH : 0) | (job.clearStencil ? D3D11_CLEAR_STENCIL : 0);
+	context->ClearDepthStencilView(dsv, clearFlags, job.depthClearValue, job.stencilClearValue);
 }

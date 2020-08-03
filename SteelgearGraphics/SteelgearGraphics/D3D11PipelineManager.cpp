@@ -27,6 +27,14 @@ SG::SGResult SG::D3D11PipelineManager::CreateClearRenderTargetJob(const SGGuid &
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11PipelineManager::CreateClearDepthStencilJob(const SGGuid & guid, const SGClearDepthStencilJob & job)
+{
+	clearDepthStencilJobs.lock();
+	clearDepthStencilJobs[guid] = job;
+	clearDepthStencilJobs.unlock();
+	return SGResult::OK;
+}
+
 SG::SGResult SG::D3D11PipelineManager::CreatePipeline(const SGGuid & guid, const SGPipeline & pipeline)
 {
 	pipelines.lock();

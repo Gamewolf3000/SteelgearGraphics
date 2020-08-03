@@ -84,6 +84,7 @@ namespace SG
 
 	struct SGClearDepthStencilJob
 	{	
+		SGGuid toClear;
 		bool clearDepth;
 		bool clearStencil;
 		FLOAT depthClearValue;

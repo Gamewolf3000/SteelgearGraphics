@@ -143,7 +143,7 @@ void SG::D3D11BufferHandler::SwapToWorkWithBuffer()
 
 	updatedTotalBuffer.clear();
 }
-
+/*
 void SG::D3D11BufferHandler::SetConstantBuffers(const std::vector<PipelineComponent>& vs, const std::vector<PipelineComponent>& hs, const std::vector<PipelineComponent>& ds, const std::vector<PipelineComponent>& gs, const std::vector<PipelineComponent>& ps, ID3D11DeviceContext * context, const SGGuid& groupGuid, const SGGraphicalEntityID& entity)
 {
 	const unsigned int arrSize = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
@@ -201,7 +201,7 @@ void SG::D3D11BufferHandler::FillBufferArray(const std::vector<PipelineComponent
 		else
 			bufferArr[i] = nullptr;
 	}
-}
+}*/
 
 void SG::D3D11BufferHandler::UpdateBufferGPU(D3D11BufferData & toUpdate, ID3D11DeviceContext * context)
 {

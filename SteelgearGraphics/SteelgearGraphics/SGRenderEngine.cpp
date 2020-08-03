@@ -4,18 +4,30 @@
 
 SG::SGRenderEngine::SGRenderEngine(const SGRenderSettings& settings)
 {
+	this->threadedRenderLoop = settings.threadedRenderLoop;
 	threadPool = new SGThreadPool(settings.nrOfContexts >= 1 ? settings.nrOfContexts - 1 : 0);
-	std::thread renderThread(&SG::SGRenderEngine::RenderThreadFunction, this);
-	renderThread.detach();
+
+	if (threadedRenderLoop)
+	{
+		std::thread renderThread(&SG::SGRenderEngine::RenderThreadFunction, this);
+		renderThread.detach();
+	}
 }
 
-void SG::SGRenderEngine::Render(const std::vector<SGPipelineJob>& jobs)
+void SG::SGRenderEngine::Render(const std::vector<SGGraphicsJob>& jobs)
 {
 	dataIndexMutex.lock();
 	pipelineJobs[toUpdate] = jobs;
 	std::swap(toUpdate, toUseNext);
 	SwapUpdateBuffer();
 	dataIndexMutex.unlock();
+
+	if (!threadedRenderLoop)
+	{
+		std::swap(toWorkWith, toUseNext);
+		SwapToWorkWithBuffer();
+		ExecuteJobs(pipelineJobs[toWorkWith]);
+	}
 }
 
 SG::SGGraphicalEntityID SG::SGRenderEngine::CreateEntity()

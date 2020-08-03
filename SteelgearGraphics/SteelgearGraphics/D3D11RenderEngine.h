@@ -25,6 +25,7 @@ namespace SG
 
 		D3D11BufferHandler* BufferHandler();
 		D3D11ShaderManager* ShaderManager();
+		D3D11StateHandler* StateHandler();
 		D3D11TextureHandler* TextureHandler();
 		D3D11PipelineManager* PipelineManager();
 		D3D11DrawCallHandler* DrawCallHandler();
@@ -49,9 +50,9 @@ namespace SG
 		// Inherited via SGRenderEngine
 		void SwapUpdateBuffer() override;
 		void SwapToWorkWithBuffer() override;
-		void ExecuteJobs(const std::vector<SGPipelineJob>& jobs) override;
+		void ExecuteJobs(const std::vector<SGGraphicsJob>& jobs) override;
 
-		void HandlePipelineJobs(const std::vector<SGPipelineJob>& jobs, int startPos, int endPos, ID3D11DeviceContext* context);
+		void HandlePipelineJobs(const std::vector<SGGraphicsJob>& jobs, int startPos, int endPos, ID3D11DeviceContext* context);
 
 		void HandleRenderJob(const SGRenderJob& job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext* context);
 		D3D11_PRIMITIVE_TOPOLOGY TranslateTopology(const SGTopology& topology);
@@ -66,6 +67,7 @@ namespace SG
 		void SetOMViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetViewports(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetConstantBuffersForShader(const std::vector<PipelineComponent>& buffers, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer*const*));
 		ID3D11Buffer* GetBuffer(const PipelineComponent& component, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		UINT GetOffset(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		UINT GetStride(const PipelineComponent& component, const SGGraphicalEntityID& entity);
@@ -77,5 +79,6 @@ namespace SG
 		UINT GetIndexCount(const SGRenderJob& job, UINT indexCount, const SGGraphicalEntityID& entity);
 
 		void HandleClearRenderTargetJob(const SGClearRenderTargetJob& job, ID3D11DeviceContext* context);
+		void HandleClearDepthStencilJob(const SGClearDepthStencilJob& job, ID3D11DeviceContext* context);
 	};
 }
