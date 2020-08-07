@@ -8,13 +8,13 @@ int SG::GetFormatElementSize(DXGI_FORMAT format)
 	case DXGI_FORMAT_R32G32B32A32_FLOAT:
 	case DXGI_FORMAT_R32G32B32A32_UINT:
 	case DXGI_FORMAT_R32G32B32A32_SINT:
-		return 128;
+		return 16; // 128 bit
 
 	case DXGI_FORMAT_R32G32B32_TYPELESS:
 	case DXGI_FORMAT_R32G32B32_FLOAT:
 	case DXGI_FORMAT_R32G32B32_UINT:
 	case DXGI_FORMAT_R32G32B32_SINT:
-		return 96;
+		return 12; // 96 bit
 
 	case DXGI_FORMAT_R16G16B16A16_TYPELESS:
 	case DXGI_FORMAT_R16G16B16A16_FLOAT:
@@ -33,7 +33,7 @@ int SG::GetFormatElementSize(DXGI_FORMAT format)
 	case DXGI_FORMAT_Y416:
 	case DXGI_FORMAT_Y210:
 	case DXGI_FORMAT_Y216:
-		return 64;
+		return 8; // 64 bit
 
 	case DXGI_FORMAT_R10G10B10A2_TYPELESS:
 	case DXGI_FORMAT_R10G10B10A2_UNORM:
@@ -73,11 +73,11 @@ int SG::GetFormatElementSize(DXGI_FORMAT format)
 	case DXGI_FORMAT_AYUV:
 	case DXGI_FORMAT_Y410:
 	case DXGI_FORMAT_YUY2:
-		return 32;
+		return 4; // 32 bit
 
 	case DXGI_FORMAT_P010:
 	case DXGI_FORMAT_P016:
-		return 24;
+		return 3; // 24 bit
 
 	case DXGI_FORMAT_R8G8_TYPELESS:
 	case DXGI_FORMAT_R8G8_UNORM:
@@ -95,12 +95,12 @@ int SG::GetFormatElementSize(DXGI_FORMAT format)
 	case DXGI_FORMAT_B5G5R5A1_UNORM:
 	case DXGI_FORMAT_A8P8:
 	case DXGI_FORMAT_B4G4R4A4_UNORM:
-		return 16;
+		return 2; // 16 bit
 
 	case DXGI_FORMAT_NV12:
 	case DXGI_FORMAT_420_OPAQUE:
 	case DXGI_FORMAT_NV11:
-		return 12;
+		return 2; // 12 bit
 
 	case DXGI_FORMAT_R8_TYPELESS:
 	case DXGI_FORMAT_R8_UNORM:
@@ -111,10 +111,10 @@ int SG::GetFormatElementSize(DXGI_FORMAT format)
 	case DXGI_FORMAT_AI44:
 	case DXGI_FORMAT_IA44:
 	case DXGI_FORMAT_P8:
-		return 8;
+		return 1; // 8 bit
 
 	case DXGI_FORMAT_R1_UNORM:
-		return 1;
+		return 1; // 1 bit
 
 	case DXGI_FORMAT_BC1_TYPELESS:
 	case DXGI_FORMAT_BC1_UNORM:
@@ -122,7 +122,7 @@ int SG::GetFormatElementSize(DXGI_FORMAT format)
 	case DXGI_FORMAT_BC4_TYPELESS:
 	case DXGI_FORMAT_BC4_UNORM:
 	case DXGI_FORMAT_BC4_SNORM:
-		return 4;
+		return 1; // 4 bit
 
 	case DXGI_FORMAT_BC2_TYPELESS:
 	case DXGI_FORMAT_BC2_UNORM:
@@ -139,7 +139,7 @@ int SG::GetFormatElementSize(DXGI_FORMAT format)
 	case DXGI_FORMAT_BC7_TYPELESS:
 	case DXGI_FORMAT_BC7_UNORM:
 	case DXGI_FORMAT_BC7_UNORM_SRGB:
-		return 8;
+		return 1; // 8 bit
 
 	default:
 		return 0;

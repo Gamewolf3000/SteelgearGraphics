@@ -6,6 +6,7 @@
 #include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
+#include "LockableUnorderedMap.h"
 
 
 namespace SG
@@ -106,11 +107,27 @@ namespace SG
 
 		SGResult CreateBlendData(const SGGuid& guid, const FLOAT blendFactor[4], UINT sampleMask);
 
+		SGResult BindStateToEntity(const SGGraphicalEntityID& entity, const SGGuid& stateGuid, const SGGuid& bindGuid);
+		SGResult BindStateToGroup(const SGGuid& group, const SGGuid& stateGuid, const SGGuid& bindGuid);
+
+		SGResult BindViewportToEntity(const SGGraphicalEntityID& entity, const SGGuid& viewportGuid, const SGGuid& bindGuid);
+		SGResult BindViewportToGroup(const SGGuid& group, const SGGuid& viewportGuid, const SGGuid& bindGuid);
+
 
 	private:
 
+		friend class D3D11RenderEngine;
+
+		enum class StateType
+		{
+			RASTERIZER,
+			DEPTH_STENCIL,
+			BLEND
+		};
+
 		struct D3D11StateData
 		{
+			StateType type;
 			union
 			{
 				ID3D11RasterizerState* rasterizer;
@@ -145,11 +162,18 @@ namespace SG
 			D3D11_VIEWPORT viewport;
 		};
 
-		std::unordered_map<SGGuid, D3D11StateData> states;
-		std::unordered_map<SGGuid, D3D11SetData> setData;
-		std::unordered_map<SGGuid, D3D11ViewportData> viewports;
+		LockableUnorderedMap<SGGuid, D3D11StateData> states;
+		LockableUnorderedMap<SGGuid, D3D11SetData> setData;
+		LockableUnorderedMap<SGGuid, D3D11ViewportData> viewports;
 
 		ID3D11Device* device;
 
+		ID3D11RasterizerState* GetRazterizerState(const SGGuid& guid);
+		ID3D11RasterizerState* GetRazterizerState(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11RasterizerState* GetRazterizerState(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		const D3D11_VIEWPORT& GetViewport(const SGGuid& guid);
+		const D3D11_VIEWPORT& GetViewport(const SGGuid& guid, const SGGuid& groupGuid);
+		const D3D11_VIEWPORT& GetViewport(const SGGuid& guid, const SGGraphicalEntityID& entity);
 	};
 }

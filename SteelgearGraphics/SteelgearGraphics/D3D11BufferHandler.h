@@ -68,6 +68,7 @@ namespace SG
 		struct VertexBufferData
 		{
 			UINT nrOfVertices;
+			UINT vertexSize;
 		};
 
 		struct IndexBufferData
@@ -121,5 +122,9 @@ namespace SG
 		UINT GetElementCount(const SGGuid& guid);
 		UINT GetElementCount(const SGGuid& guid, const SGGuid& groupGuid);
 		UINT GetElementCount(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		UINT GetVBElementSize(const SGGuid& guid);
+		UINT GetVBElementSize(const SGGuid& guid, const SGGuid& groupGuid);
+		UINT GetVBElementSize(const SGGuid& guid, const SGGraphicalEntityID& entity);
 	};
 }

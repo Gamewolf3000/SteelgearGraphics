@@ -29,11 +29,13 @@ void SG::SGGraphicsHandler::SwapUpdateBuffer()
 		entityData[pair.first][pair.second].SwitchUpdateBuffer();
 
 	updatedEntitiesTotalBuffer.insert(updatedEntitiesTotalBuffer.end(), updatedEntitiesFrameBuffer.begin(), updatedEntitiesFrameBuffer.end());
+	updatedEntitiesFrameBuffer.clear();
 
 	for (auto& pair : updatedGroupsFrameBuffer)
 		groupData[pair.first][pair.second].SwitchUpdateBuffer();
 
 	updatedGroupsTotalBuffer.insert(updatedGroupsTotalBuffer.end(), updatedGroupsFrameBuffer.begin(), updatedGroupsFrameBuffer.end());
+	updatedGroupsFrameBuffer.clear();
 }
 
 void SG::SGGraphicsHandler::SwapToWorkWithBuffer()

@@ -80,5 +80,7 @@ namespace SG
 
 		ID3D11Device* device;
 
+		D3D11_FILTER TranslateFilter(const Filter& filter);
+		D3D11_TEXTURE_ADDRESS_MODE TranslateAdressMode(const TextureAdressMode& adressMode);
 	};
 }

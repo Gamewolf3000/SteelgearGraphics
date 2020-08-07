@@ -47,6 +47,7 @@ namespace SG
 		SGResult CreateTexture3D(const SGGuid& guid, const SGTextureData& generalSettings, UINT width, UINT height, UINT depth);
 
 		SGResult CreateSRV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels);
+		SGResult CreateSRV(const SGGuid& guid, const SGGuid& textureGuid);
 		SGResult CreateSRVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels, UINT firstArraySlice, UINT arraySize);
 
 		SGResult CreateUAV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice = 0, UINT wSize = 0);
@@ -103,6 +104,7 @@ namespace SG
 
 		void SetUsageAndCPUAccessFlags(const SGTextureData & generalSettings, D3D11_USAGE& usage, UINT& cpuAccessFlags);
 		void SetBindflags(const SGTextureData & generalSettings, UINT& flags);
+		D3D11_SRV_DIMENSION GetSRVDimension(TextureType type);
 		D3D11_RTV_DIMENSION GetRTVDimension(TextureType type);
 		D3D11_DSV_DIMENSION GetDSVDimension(TextureType type);
 
@@ -112,6 +114,10 @@ namespace SG
 
 		void SwapUpdateBuffer();
 		void SwapToWorkWithBuffer();
+
+		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid);
+		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid, const SGGraphicalEntityID& entity);
 
 		ID3D11RenderTargetView* GetRTV(const SGGuid& guid);
 		ID3D11RenderTargetView* GetRTV(const SGGuid& guid, const SGGuid& groupGuid);

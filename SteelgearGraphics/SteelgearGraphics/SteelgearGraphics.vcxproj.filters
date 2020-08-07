@@ -105,5 +105,8 @@
     <ClCompile Include="D3D11StateHandler.cpp">
       <Filter>D3D11</Filter>
     </ClCompile>
+    <ClCompile Include="D3D11SamplerHandler.cpp">
+      <Filter>D3D11</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -60,7 +60,9 @@ namespace SG
 		RenderShader pixelShader;
 		std::vector<PipelineComponent> uavs;
 		std::vector<PipelineComponent> rtvs;
+		std::vector<PipelineComponent> viewports;
 		PipelineComponent dsv;
+		PipelineComponent rasterizerState;
 		PipelineComponent blendState;
 		PipelineComponent drawCall;
 	};
@@ -83,6 +85,7 @@ namespace SG
 
 	struct SGClearDepthStencilJob
 	{	
+		SGGuid toClear;
 		bool clearDepth;
 		bool clearStencil;
 		FLOAT depthClearValue;

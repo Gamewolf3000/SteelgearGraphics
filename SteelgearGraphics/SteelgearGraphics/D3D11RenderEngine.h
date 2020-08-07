@@ -62,17 +62,23 @@ namespace SG
 		void HandleEntityRenderJob(const SGRenderJob& job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext* context);
 
 		void SetConstantBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetShaderResourceViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetVertexBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetIndexBuffer(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetOMViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetViewports(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetStates(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetConstantBuffersForShader(const std::vector<PipelineComponent>& buffers, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer*const*));
+		void SetShaderResourceViewsForShader(const std::vector<PipelineComponent>& srvs, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11ShaderResourceView *const*));
 		ID3D11Buffer* GetBuffer(const PipelineComponent& component, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		UINT GetOffset(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		UINT GetStride(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		UINT GetStrideFromVB(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		ID3D11ShaderResourceView* GetSRV(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		ID3D11RenderTargetView* GetRTV(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		ID3D11DepthStencilView* GetDSV(const PipelineComponent& component, const SGGraphicalEntityID& entity);
+		ID3D11RasterizerState* GetRasterizerState(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		SG::D3D11DrawCallHandler::DrawCall GetDrawCall(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		D3D11_VIEWPORT GetViewport(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		UINT GetVertexCount(const SGRenderJob& job, UINT vertexCount, const SGGraphicalEntityID& entity);

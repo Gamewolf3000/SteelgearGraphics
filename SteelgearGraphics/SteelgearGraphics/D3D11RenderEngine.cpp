@@ -277,8 +277,11 @@ void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const
 	for (auto& entity : entities)
 	{
 		SetConstantBuffers(job, entity, context);
+		SetShaderResourceViews(job, entity, context);
 		SetVertexBuffers(job, entity, context);
 		SetIndexBuffer(job, entity, context);
+		SetViewports(job, entity, context);
+		SetStates(job, entity, context);
 		SetOMViews(job, entity, context);
 		ExecuteDrawCall(job, entity, context);
 	}
@@ -291,6 +294,15 @@ void SG::D3D11RenderEngine::SetConstantBuffers(const SGRenderJob & job, const SG
 	SetConstantBuffersForShader(job.domainShader.constantBuffers, entity, context, &ID3D11DeviceContext::DSSetConstantBuffers);
 	SetConstantBuffersForShader(job.geometryShader.constantBuffers, entity, context, &ID3D11DeviceContext::GSSetConstantBuffers);
 	SetConstantBuffersForShader(job.pixelShader.constantBuffers, entity, context, &ID3D11DeviceContext::PSSetConstantBuffers);
+}
+
+void SG::D3D11RenderEngine::SetShaderResourceViews(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	SetShaderResourceViewsForShader(job.vertexShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::VSSetShaderResources);
+	SetShaderResourceViewsForShader(job.hullShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::HSSetShaderResources);
+	SetShaderResourceViewsForShader(job.domainShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::DSSetShaderResources);
+	SetShaderResourceViewsForShader(job.geometryShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::GSSetShaderResources);
+	SetShaderResourceViewsForShader(job.pixelShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::PSSetShaderResources);
 }
 
 void SG::D3D11RenderEngine::SetVertexBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
@@ -309,6 +321,10 @@ void SG::D3D11RenderEngine::SetVertexBuffers(const SGRenderJob & job, const SGGr
 
 		if (vBuffer.stride.resourceGuid != SGGuid())
 			strideArr[counter] = GetStride(vBuffer.stride, entity);
+		else
+			strideArr[counter] = GetStrideFromVB(vBuffer.buffer, entity);
+
+		++counter;
 	}
 
 	context->IASetVertexBuffers(0, arrSize, bufferArr, strideArr, offsetArr);
@@ -360,6 +376,13 @@ void SG::D3D11RenderEngine::SetViewports(const SGRenderJob & job, const SGGraphi
 	context->RSSetViewports(nrOfViewports, viewports);
 }
 
+void SG::D3D11RenderEngine::SetStates(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	context->RSSetState(GetRasterizerState(job.rasterizerState, entity));
+	//blendstate
+	//depthstencilstate
+}
+
 void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
 {
 	SG::D3D11DrawCallHandler::DrawCall drawCall = GetDrawCall(job.drawCall, entity);
@@ -388,9 +411,20 @@ void SG::D3D11RenderEngine::SetConstantBuffersForShader(const std::vector<Pipeli
 	ID3D11Buffer* bufferArr[arrSize] = {};
 	UINT counter = 0;
 	for (auto& cBuffer : buffers)
-		bufferArr[counter] = GetBuffer(cBuffer, entity, context);
+		bufferArr[counter++] = GetBuffer(cBuffer, entity, context);
 
 	(context->*func)(0, arrSize, bufferArr);
+}
+
+void SG::D3D11RenderEngine::SetShaderResourceViewsForShader(const std::vector<PipelineComponent>& srvs, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context, void(_stdcall ID3D11DeviceContext::* func)(UINT, UINT, ID3D11ShaderResourceView * const *))
+{
+	const UINT arrSize = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
+	ID3D11ShaderResourceView* srvArr[arrSize] = {};
+	UINT counter = 0;
+	for (auto& srv : srvs)
+		srvArr[counter++] = GetSRV(srv, entity);
+
+	(context->*func)(0, arrSize, srvArr);
 }
 
 ID3D11Buffer * SG::D3D11RenderEngine::GetBuffer(const PipelineComponent & component, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
@@ -483,6 +517,66 @@ UINT SG::D3D11RenderEngine::GetStride(const PipelineComponent & component, const
 	return toReturn;
 }
 
+UINT SG::D3D11RenderEngine::GetStrideFromVB(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	UINT toReturn = 0;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = bufferHandler->GetVBElementSize(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = bufferHandler->GetVBElementSize(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = bufferHandler->GetVBElementSize(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+ID3D11ShaderResourceView * SG::D3D11RenderEngine::GetSRV(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	ID3D11ShaderResourceView* toReturn = nullptr;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = textureHandler->GetSRV(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = textureHandler->GetSRV(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = textureHandler->GetSRV(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
 ID3D11RenderTargetView* SG::D3D11RenderEngine::GetRTV(const PipelineComponent & component, const SGGraphicalEntityID & entity)
 {
 	ID3D11RenderTargetView* toReturn = nullptr;
@@ -535,6 +629,40 @@ ID3D11DepthStencilView * SG::D3D11RenderEngine::GetDSV(const PipelineComponent &
 	{
 		entityMutex.lock();
 		toReturn = textureHandler->GetDSV(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+ID3D11RasterizerState * SG::D3D11RenderEngine::GetRasterizerState(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	ID3D11RasterizerState* toReturn = nullptr;
+
+	if (component.resourceGuid == SGGuid())
+		return toReturn;
+
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = stateHandler->GetRazterizerState(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = stateHandler->GetRazterizerState(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = stateHandler->GetRazterizerState(component.resourceGuid, entity);
 		entityMutex.unlock();
 	}
 	break;

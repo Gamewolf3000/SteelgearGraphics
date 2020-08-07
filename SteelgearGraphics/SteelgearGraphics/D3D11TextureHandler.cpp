@@ -60,11 +60,13 @@ SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const
 	desc.SampleDesc = sampleDesc;
 	SetUsageAndCPUAccessFlags(generalSettings, desc.Usage, desc.CPUAccessFlags);
 	SetBindflags(generalSettings, desc.BindFlags);
-	desc.MiscFlags = 0;
+	desc.MiscFlags = 0 | (generalSettings.generateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0) | (generalSettings.resourceClamp ? D3D11_RESOURCE_MISC_RESOURCE_CLAMP : 0);
+	desc.MiscFlags |= (texturecube ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0);
 
 	D3D11_SUBRESOURCE_DATA data;
 	data.pSysMem = generalSettings.data;
 	data.SysMemPitch = width * GetFormatElementSize(generalSettings.format);
+	data.SysMemSlicePitch = 0;
 
 	ID3D11Texture2D* texture;
 
@@ -81,13 +83,100 @@ SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11TextureHandler::CreateSRV(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+	{
+		textures.unlock();
+		return SGResult::GUID_MISSING;
+	}
+
+	textures.unlock();
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = GetSRVDimension(storedData->second.type);
+
+	switch (storedData->second.type)
+	{
+	case TextureType::TEXTURE_1D:
+		desc.Texture1D.MostDetailedMip = mostDetailedMip;
+		desc.Texture1D.MipLevels = mipLevels;
+		break;
+	case TextureType::TEXTURE_2D:
+		desc.Texture2D.MostDetailedMip = mostDetailedMip;
+		desc.Texture2D.MipLevels = mipLevels;
+		break;
+	case TextureType::TEXTURE_3D:
+		desc.Texture3D.MostDetailedMip = mostDetailedMip;
+		desc.Texture3D.MipLevels = mipLevels;
+		break;
+	case TextureType::TEXTURE_MULTISAMPLED_2D:
+		// Do nothing
+		break;
+	case TextureType::TEXTURE_CUBE:
+		desc.TextureCube.MostDetailedMip = mostDetailedMip;
+		desc.TextureCube.MipLevels = mipLevels;
+		break;
+	default:
+		throw std::runtime_error("CreateSRV called refering to texture of incorrect type");
+		break;
+	}
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::SRV;
+
+	if (FAILED(device->CreateShaderResourceView(storedData->second.texture.texture2D, &desc, &toStore.view.srv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11TextureHandler::CreateSRV(const SGGuid & guid, const SGGuid & textureGuid)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+	{
+		textures.unlock();
+		return SGResult::GUID_MISSING;
+	}
+
+	textures.unlock();
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::SRV;
+
+	if (FAILED(device->CreateShaderResourceView(storedData->second.texture.texture2D, nullptr, &toStore.view.srv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
 SG::SGResult SG::D3D11TextureHandler::CreateRTV(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice, UINT wSize)
 {
 	textures.lock();
 	auto storedData = textures.find(textureGuid);
 
 	if (storedData == textures.end())
+	{
+		textures.unlock();
 		return SGResult::GUID_MISSING;
+	}
 
 	textures.unlock();
 
@@ -136,7 +225,10 @@ SG::SGResult SG::D3D11TextureHandler::CreateRTV(const SGGuid & guid, const SGGui
 	auto storedData = textures.find(textureGuid);
 
 	if (storedData == textures.end())
+	{
+		textures.unlock();
 		return SGResult::GUID_MISSING;
+	}
 
 	textures.unlock();
 
@@ -259,6 +351,7 @@ void SG::D3D11TextureHandler::SwapUpdateBuffer()
 		textures[guid].updatedData.SwitchUpdateBuffer();
 
 	updatedTotalBuffer.insert(updatedTotalBuffer.end(), updatedFrameBuffer.begin(), updatedFrameBuffer.end());
+	updatedFrameBuffer.clear();
 }
 
 void SG::D3D11TextureHandler::SwapToWorkWithBuffer()
@@ -272,6 +365,117 @@ void SG::D3D11TextureHandler::SwapToWorkWithBuffer()
 	updatedTotalBuffer.clear();
 }
 
+ID3D11ShaderResourceView * SG::D3D11TextureHandler::GetSRV(const SGGuid & guid)
+{
+	views.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (views.find(guid) == views.end())
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not exist");
+		}
+
+		if (views[guid].type != ResourceViewType::SRV)
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not match an srv");
+		}
+	}
+
+	auto toReturn = views[guid].view.srv;
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11ShaderResourceView * SG::D3D11TextureHandler::GetSRV(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	views.lock();
+	groupData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (groupData.find(groupGuid) == groupData.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, group does not exist");
+		}
+
+		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, group does not have the guid");
+		}
+
+		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not exist");
+		}
+
+		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::SRV)
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not match an srv");
+		}
+	}
+
+	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.srv;
+	groupData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11ShaderResourceView * SG::D3D11TextureHandler::GetSRV(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	views.lock();
+	entityData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (entityData.find(entity) == entityData.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, entity does not exist");
+		}
+
+		if (entityData[entity].find(guid) == entityData[entity].end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, entity does not have the guid");
+		}
+
+		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not exist");
+		}
+
+		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::SRV)
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not match an srv");
+		}
+	}
+
+	auto toReturn = views[entityData[entity][guid].GetActive()].view.srv;
+	entityData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
 ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid)
 {
 	views.lock();
@@ -279,10 +483,16 @@ ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid)
 	if constexpr (DEBUG_VERSION)
 	{
 		if (views.find(guid) == views.end())
+		{
+			views.unlock();
 			throw std::runtime_error("Error fetching rtv, guid does not exist");
+		}
 
 		if (views[guid].type != ResourceViewType::RTV)
+		{
+			views.unlock();
 			throw std::runtime_error("Error fetching rtv, guid does not match an rtv");
+		}
 	}
 
 	auto toReturn = views[guid].view.rtv;
@@ -298,17 +508,33 @@ ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid, co
 
 	if constexpr (DEBUG_VERSION)
 	{
-		if(groupData.find(groupGuid) == groupData.end())
+		if (groupData.find(groupGuid) == groupData.end())
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching rtv, group does not exist");
+		}
 
 		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching rtv, group does not have the guid");
+		}
 
 		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching rtv, guid does not exist");
+		}
 
 		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::RTV)
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching rtv, guid does not match an rtv");
+		}
 	}
 
 	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.rtv;
@@ -326,16 +552,32 @@ ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid, co
 	if constexpr (DEBUG_VERSION)
 	{
 		if (entityData.find(entity) == entityData.end())
-			throw std::runtime_error("Error fetching rtv, group does not exist");
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching rtv, entity does not exist");
+		}
 
 		if (entityData[entity].find(guid) == entityData[entity].end())
-			throw std::runtime_error("Error fetching rtv, group does not have the guid");
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching rtv, entity does not have the guid");
+		}
 
 		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			entityData.unlock();
 			throw std::runtime_error("Error fetching rtv, guid does not exist");
+		}
 
 		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::RTV)
+		{
+			views.unlock();
+			entityData.unlock();
 			throw std::runtime_error("Error fetching rtv, guid does not match an rtv");
+		}
 	}
 
 	auto toReturn = views[entityData[entity][guid].GetActive()].view.rtv;
@@ -352,10 +594,16 @@ ID3D11DepthStencilView * SG::D3D11TextureHandler::GetDSV(const SGGuid & guid)
 	if constexpr (DEBUG_VERSION)
 	{
 		if (views.find(guid) == views.end())
+		{
+			views.unlock();
 			throw std::runtime_error("Error fetching dsv, guid does not exist");
+		}
 
 		if (views[guid].type != ResourceViewType::DSV)
+		{
+			views.unlock();
 			throw std::runtime_error("Error fetching dsv, guid does not match a dsv");
+		}
 	}
 
 	auto toReturn = views[guid].view.dsv;
@@ -372,16 +620,32 @@ ID3D11DepthStencilView * SG::D3D11TextureHandler::GetDSV(const SGGuid & guid, co
 	if constexpr (DEBUG_VERSION)
 	{
 		if (groupData.find(groupGuid) == groupData.end())
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching dsv, group does not exist");
+		}
 
 		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching dsv, group does not have the guid");
+		}
 
 		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching dsv, guid does not exist");
+		}
 
 		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::RTV)
+		{
+			views.unlock();
+			groupData.unlock();
 			throw std::runtime_error("Error fetching dsv, guid does not match a dsv");
+		}
 	}
 
 	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.dsv;
@@ -399,16 +663,32 @@ ID3D11DepthStencilView * SG::D3D11TextureHandler::GetDSV(const SGGuid & guid, co
 	if constexpr (DEBUG_VERSION)
 	{
 		if (entityData.find(entity) == entityData.end())
-			throw std::runtime_error("Error fetching dsv, group does not exist");
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching dsv, entity does not exist");
+		}
 
 		if (entityData[entity].find(guid) == entityData[entity].end())
-			throw std::runtime_error("Error fetching dsv, group does not have the guid");
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching dsv, entity does not have the guid");
+		}
 
 		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			entityData.unlock();
 			throw std::runtime_error("Error fetching dsv, guid does not exist");
+		}
 
 		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::RTV)
+		{
+			views.unlock();
+			entityData.unlock();
 			throw std::runtime_error("Error fetching dsv, guid does not match an dsv");
+		}
 	}
 
 	auto toReturn = views[entityData[entity][guid].GetActive()].view.dsv;
@@ -470,6 +750,47 @@ void SG::D3D11TextureHandler::SetBindflags(const SGTextureData & generalSettings
 			break;
 		}
 	}
+}
+
+D3D11_SRV_DIMENSION SG::D3D11TextureHandler::GetSRVDimension(TextureType type)
+{
+	D3D11_SRV_DIMENSION toReturn = D3D11_SRV_DIMENSION_UNKNOWN;
+
+	switch (type)
+	{
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_1D:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURE1D;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_ARRAY_1D:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURE1DARRAY;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_2D:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURE2D;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_ARRAY_2D:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_MULTISAMPLED_2D:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURE2DMS;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_ARRAY_MULTISAMPLED_2D:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURE2DMSARRAY;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_3D:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURE3D;
+		break;
+	case ::SG::D3D11TextureHandler::TextureType::TEXTURE_CUBE:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURECUBE;
+		break;
+	case ::SG::D3D11TextureHandler::TextureType::TEXTURE_ARRAY_CUBE:
+		toReturn = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+		break;
+	default:
+		throw std::runtime_error("Trying to create an SRV with a texture of incompatible type");
+		break;
+	}
+
+	return toReturn;
 }
 
 D3D11_RTV_DIMENSION SG::D3D11TextureHandler::GetRTVDimension(TextureType type)

@@ -187,6 +187,7 @@
     <ClCompile Include="D3D11DrawCallHandler.cpp" />
     <ClCompile Include="D3D11PipelineManager.cpp" />
     <ClCompile Include="D3D11RenderEngine.cpp" />
+    <ClCompile Include="D3D11SamplerHandler.cpp" />
     <ClCompile Include="D3D11ShaderManager.cpp" />
     <ClCompile Include="D3D11StateHandler.cpp" />
     <ClCompile Include="D3D11TextureHandler.cpp" />

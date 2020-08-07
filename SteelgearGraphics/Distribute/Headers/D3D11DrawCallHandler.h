@@ -39,8 +39,8 @@ namespace SG
 		SGResult CreateDrawInstancedCall(const SGGuid& guid, UINT vertexCountPerInstance = BUFFER0, UINT instanceCount = 0, UINT startVertexLocation = 0, UINT startInstanceLocation = 0);
 		SGResult CreateDrawIndexedInstancedCall(const SGGuid& guid, UINT indexCountPerInstance = 0, UINT instanceCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0, UINT startInstanceLocation = 0);
 
-		SGResult BindBufferToEntity(const SGGraphicalEntityID& entity, const SGGuid& callGuid, const SGGuid& bindGuid);
-		SGResult BindBufferToGroup(const SGGuid& group, const SGGuid& callGuid, const SGGuid& bindGuid);
+		SGResult BindDrawCallToEntity(const SGGraphicalEntityID& entity, const SGGuid& callGuid, const SGGuid& bindGuid);
+		SGResult BindDrawCallToGroup(const SGGuid& group, const SGGuid& callGuid, const SGGuid& bindGuid);
 
 	private:
 

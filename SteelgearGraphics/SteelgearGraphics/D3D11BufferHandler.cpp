@@ -131,6 +131,7 @@ void SG::D3D11BufferHandler::SwapUpdateBuffer()
 		buffers[guid].updatedData.SwitchUpdateBuffer();
 	
 	updatedTotalBuffer.insert(updatedTotalBuffer.end(), updatedFrameBuffer.begin(), updatedFrameBuffer.end());
+	updatedFrameBuffer.clear();
 }
 
 void SG::D3D11BufferHandler::SwapToWorkWithBuffer()
@@ -217,18 +218,17 @@ void SG::D3D11BufferHandler::UpdateBufferGPU(D3D11BufferData & toUpdate, ID3D11D
 
 ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11DeviceContext * context)
 {
+	buffers.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		buffers.lock();
 		if (buffers.find(guid) == buffers.end())
 		{
 			buffers.unlock();
 			throw std::runtime_error("Error, missing guid when fetching buffer");
 		}
-		buffers.unlock();
 	}
 
-	buffers.lock();
 	D3D11BufferData& bData = buffers[guid];
 	buffers.unlock();
 
@@ -240,22 +240,19 @@ ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11Devi
 
 ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11DeviceContext * context, const SGGuid & groupGuid)
 {
+	groupData.lock();
+	buffers.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		groupData.lock();
-		buffers.lock();
 		if (buffers.find(groupData[groupGuid][guid].GetActive()) == buffers.end())
 		{
 			buffers.unlock();
 			groupData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching buffer");
 		}
-		buffers.unlock();
-		groupData.unlock();
 	}
 
-	groupData.lock();
-	buffers.lock();
 	D3D11BufferData& bData = buffers[groupData[groupGuid][guid].GetActive()];
 	buffers.unlock();
 	groupData.unlock();
@@ -268,22 +265,19 @@ ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11Devi
 
 ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11DeviceContext * context, const SGGraphicalEntityID & entity)
 {
+	entityData.lock();
+	buffers.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		entityData.lock();
-		buffers.lock();
 		if (buffers.find(entityData[entity][guid].GetActive()) == buffers.end())
 		{
 			buffers.unlock();
 			entityData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching buffer");
 		}
-		buffers.unlock();
-		entityData.unlock();
 	}
 
-	entityData.lock();
-	buffers.lock();
 	D3D11BufferData& bData = buffers[entityData[entity][guid].GetActive()];
 	buffers.unlock();
 	entityData.unlock();
@@ -296,18 +290,17 @@ ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11Devi
 
 UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid)
 {
+	bufferOffsets.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		bufferOffsets.lock();
 		if (bufferOffsets.find(guid) == bufferOffsets.end())
 		{
 			bufferOffsets.unlock();
 			throw std::runtime_error("Error, missing guid when fetching offset");
 		}
-		bufferOffsets.unlock();
 	}
 
-	bufferOffsets.lock();
 	UINT toReturn = bufferOffsets[guid];
 	bufferOffsets.unlock();
 	return toReturn;
@@ -315,22 +308,19 @@ UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid)
 
 UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid, const SGGuid & groupGuid)
 {
+	groupData.lock();
+	bufferOffsets.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		groupData.lock();
-		bufferOffsets.lock();
 		if (bufferOffsets.find(groupData[groupGuid][guid].GetActive()) == bufferOffsets.end())
 		{
 			bufferOffsets.unlock();
 			groupData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching offset");
 		}
-		bufferOffsets.unlock();
-		groupData.unlock();
 	}
 
-	groupData.lock();
-	bufferOffsets.lock();
 	UINT toReturn = bufferOffsets[groupData[groupGuid][guid].GetActive()];
 	bufferOffsets.unlock();
 	groupData.unlock();
@@ -339,22 +329,19 @@ UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid, const SGGuid & group
 
 UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
+	entityData.lock();
+	bufferOffsets.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		entityData.lock();
-		bufferOffsets.lock();
 		if (bufferOffsets.find(entityData[entity][guid].GetActive()) == bufferOffsets.end())
 		{
 			bufferOffsets.unlock();
 			entityData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching offset");
 		}
-		bufferOffsets.unlock();
-		entityData.unlock();
 	}
 
-	entityData.lock();
-	bufferOffsets.lock();
 	UINT toReturn = bufferOffsets[entityData[entity][guid].GetActive()];
 	bufferOffsets.unlock();
 	entityData.unlock();
@@ -363,18 +350,17 @@ UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid, const SGGraphicalEnt
 
 UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid)
 {
+	bufferStrides.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		bufferStrides.lock();
 		if (bufferStrides.find(guid) == bufferStrides.end())
 		{
 			bufferStrides.unlock();
 			throw std::runtime_error("Error, missing guid when fetching stride");
 		}
-		bufferStrides.unlock();
 	}
 
-	bufferStrides.lock();
 	UINT toReturn = bufferStrides[guid];
 	bufferStrides.unlock();
 	return toReturn;
@@ -382,22 +368,19 @@ UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid)
 
 UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid, const SGGuid & groupGuid)
 {
+	groupData.lock();
+	bufferStrides.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		groupData.lock();
-		bufferStrides.lock();
 		if (bufferStrides.find(groupData[groupGuid][guid].GetActive()) == bufferStrides.end())
 		{
 			bufferStrides.unlock();
 			groupData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching stride");
 		}
-		bufferStrides.unlock();
-		groupData.unlock();
 	}
 
-	groupData.lock();
-	bufferStrides.lock();
 	UINT toReturn = bufferStrides[groupData[groupGuid][guid].GetActive()];
 	bufferStrides.unlock();
 	groupData.unlock();
@@ -406,22 +389,19 @@ UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid, const SGGuid & group
 
 UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
+	entityData.lock();
+	bufferStrides.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		entityData.lock();
-		bufferStrides.lock();
 		if (bufferStrides.find(entityData[entity][guid].GetActive()) == bufferStrides.end())
 		{
 			bufferStrides.unlock();
 			entityData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching buffer");
 		}
-		bufferStrides.unlock();
-		entityData.unlock();
 	}
 
-	entityData.lock();
-	bufferStrides.lock();
 	UINT toReturn = bufferStrides[entityData[entity][guid].GetActive()];
 	bufferStrides.unlock();
 	entityData.unlock();
@@ -430,19 +410,17 @@ UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid, const SGGraphicalEnt
 
 UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid)
 {
+	buffers.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		buffers.lock();
 		if (buffers.find(guid) == buffers.end())
 		{
 			buffers.unlock();
 			throw std::runtime_error("Error, missing guid when fetching element count of buffer");
 		}
-
-		buffers.unlock();
 	}
 
-	buffers.lock();
 	D3D11BufferData& bData = buffers[guid];
 	buffers.unlock();
 
@@ -459,23 +437,19 @@ UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid)
 
 UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGuid & groupGuid)
 {
+	groupData.lock();
+	buffers.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		groupData.lock();
-		buffers.lock();
 		if (buffers.find(groupData[groupGuid][guid].GetActive()) == buffers.end())
 		{
 			buffers.unlock();
 			groupData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching element count of buffer");
 		}
-
-		buffers.unlock();
-		groupData.unlock();
 	}
 
-	groupData.lock();
-	buffers.lock();
 	D3D11BufferData& bData = buffers[groupData[groupGuid][guid].GetActive()];
 	buffers.unlock();
 	groupData.unlock();
@@ -493,23 +467,19 @@ UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGuid &
 
 UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
+	entityData.lock();
+	buffers.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		entityData.lock();
-		buffers.lock();
 		if (buffers.find(entityData[entity][guid].GetActive()) == buffers.end())
 		{
 			buffers.unlock();
 			entityData.unlock();
 			throw std::runtime_error("Error, missing guid when fetching element count of buffer");
 		}
-
-		buffers.unlock();
-		entityData.unlock();
 	}
 
-	entityData.lock();
-	buffers.lock();
 	D3D11BufferData& bData = buffers[entityData[entity][guid].GetActive()];
 	buffers.unlock();
 	entityData.unlock();
@@ -522,6 +492,87 @@ UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGraphi
 		return bData.specificData.ib.nrOfIndices;
 	default:
 		throw std::runtime_error("Error, attempting to fetch element count from a buffer that is not a vertex or index buffer");
+	}
+}
+
+UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid)
+{
+	buffers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (buffers.find(guid) == buffers.end())
+		{
+			buffers.unlock();
+			throw std::runtime_error("Error, missing guid when fetching size of vertice of a vertex buffer");
+		}
+	}
+
+	D3D11BufferData& bData = buffers[guid];
+	buffers.unlock();
+
+	switch (bData.type)
+	{
+	case BufferType::VERTEX_BUFFER:
+		return bData.specificData.vb.vertexSize;
+	default:
+		throw std::runtime_error("Error, attempting to fetch size of vertice from a buffer that is not a vertex buffer");
+	}
+}
+
+UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	groupData.lock();
+	buffers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (buffers.find(groupData[groupGuid][guid].GetActive()) == buffers.end())
+		{
+			buffers.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error, missing guid when fetching size of vertice of a vertex buffer");
+		}
+	}
+
+	D3D11BufferData& bData = buffers[groupData[groupGuid][guid].GetActive()];
+	buffers.unlock();
+	groupData.unlock();
+
+	switch (bData.type)
+	{
+	case BufferType::VERTEX_BUFFER:
+		return bData.specificData.vb.vertexSize;
+	default:
+		throw std::runtime_error("Error, attempting to fetch size of vertice from a buffer that is not a vertex buffer");
+	}
+}
+
+UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	entityData.lock();
+	buffers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (buffers.find(entityData[entity][guid].GetActive()) == buffers.end())
+		{
+			buffers.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error, missing guid when fetching size of vertice of a vertex buffer");
+		}
+	}
+
+	D3D11BufferData& bData = buffers[entityData[entity][guid].GetActive()];
+	buffers.unlock();
+	entityData.unlock();
+
+	switch (bData.type)
+	{
+	case BufferType::VERTEX_BUFFER:
+		return bData.specificData.vb.vertexSize;
+	default:
+		throw std::runtime_error("Error, attempting to fetch size of vertice from a buffer that is not a vertex buffer");
 	}
 }
 
@@ -554,6 +605,7 @@ SG::D3D11BufferHandler::~D3D11BufferHandler()
 SG::SGResult SG::D3D11BufferHandler::CreateVertexBuffer(const SGGuid & guid, UINT size, UINT nrOfVertices, bool dynamic, bool streamOut, void * data)
 {
 	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
 	desc.ByteWidth = size;
 	desc.MiscFlags = 0;
 	desc.StructureByteStride = 0;
@@ -585,11 +637,13 @@ SG::SGResult SG::D3D11BufferHandler::CreateVertexBuffer(const SGGuid & guid, UIN
 	}
 
 	D3D11_SUBRESOURCE_DATA bufferData;
+	ZeroMemory(&bufferData, sizeof(bufferData));
 	bufferData.pSysMem = data;
 
 	D3D11BufferData toStore;
 	toStore.type = BufferType::VERTEX_BUFFER;
 	toStore.specificData.vb.nrOfVertices = nrOfVertices;
+	toStore.specificData.vb.vertexSize = size / nrOfVertices;
 	toStore.updatedData = TripleBufferedData(UpdateData(size), UpdateData(size), UpdateData(size));
 
 	if (FAILED(device->CreateBuffer(&desc, &bufferData, &toStore.buffer)))
@@ -606,6 +660,7 @@ SG::SGResult SG::D3D11BufferHandler::CreateVertexBuffer(const SGGuid & guid, UIN
 SG::SGResult SG::D3D11BufferHandler::CreateIndexBuffer(const SGGuid & guid, UINT size, UINT nrOfIndices, bool dynamic, void * data)
 {
 	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
 	desc.ByteWidth = size;
 	desc.MiscFlags = 0;
 	desc.StructureByteStride = 0;
@@ -623,6 +678,7 @@ SG::SGResult SG::D3D11BufferHandler::CreateIndexBuffer(const SGGuid & guid, UINT
 	}
 
 	D3D11_SUBRESOURCE_DATA bufferData;
+	ZeroMemory(&bufferData, sizeof(bufferData));
 	bufferData.pSysMem = data;
 
 	D3D11BufferData toStore;
@@ -643,6 +699,7 @@ SG::SGResult SG::D3D11BufferHandler::CreateIndexBuffer(const SGGuid & guid, UINT
 SG::SGResult SG::D3D11BufferHandler::CreateConstantBuffer(const SGGuid & guid, UINT size, bool dynamic, bool cpuUpdate, void * data)
 {
 	D3D11_BUFFER_DESC desc;
+	ZeroMemory(&desc, sizeof(desc));
 	desc.ByteWidth = size;
 	desc.MiscFlags = 0;
 	desc.StructureByteStride = 0;
@@ -665,6 +722,7 @@ SG::SGResult SG::D3D11BufferHandler::CreateConstantBuffer(const SGGuid & guid, U
 	}
 
 	D3D11_SUBRESOURCE_DATA bufferData;
+	ZeroMemory(&bufferData, sizeof(bufferData));
 	bufferData.pSysMem = data;
 
 	D3D11BufferData toStore;

@@ -48,10 +48,11 @@ namespace SG
 		IDXGIAdapter* adapter = nullptr;
 		HWND windowHandle;
 		int nrOfContexts = 1;
+		bool threadedRenderLoop = true;
 		SGBackBufferSettings backBufferSettings;
 	};
 
-	struct SGPipelineJob
+	struct SGGraphicsJob
 	{
 		SGGuid pipelineGuid;
 		std::vector<SGGraphicalEntityID> entitiesToRender;
@@ -63,7 +64,7 @@ namespace SG
 		SGRenderEngine(const SGRenderSettings& settings);
 		virtual ~SGRenderEngine() = default;
 
-		void Render(const std::vector<SGPipelineJob>& jobs);
+		void Render(const std::vector<SGGraphicsJob>& jobs);
 
 		SGGraphicalEntityID CreateEntity();
 		void SetEntityToGroup(const SGGraphicalEntityID& entity, const SGGuid& groupGuid);
@@ -73,15 +74,16 @@ namespace SG
 		void RenderThreadFunction();
 		virtual void SwapUpdateBuffer() = 0;
 		virtual void SwapToWorkWithBuffer() = 0;
-		virtual void ExecuteJobs(const std::vector<SGPipelineJob>& jobs) = 0;
+		virtual void ExecuteJobs(const std::vector<SGGraphicsJob>& jobs) = 0;
 
 		std::mutex entityMutex;
 		std::vector<SGGraphicalEntity> graphicalEntities;
-		std::vector<SGPipelineJob> pipelineJobs[3];
+		std::vector<SGGraphicsJob> pipelineJobs[3];
 		std::mutex dataIndexMutex;
 		int toWorkWith = 0;
 		int toUseNext = 1;
 		int toUpdate = 2;
+		bool threadedRenderLoop;
 		SGThreadPool* threadPool;
 		std::atomic<bool> engineActive = true;
 		std::atomic<bool> renderthreadActive = false;

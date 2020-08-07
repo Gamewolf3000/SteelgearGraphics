@@ -62,6 +62,7 @@ namespace SG
 		std::vector<PipelineComponent> rtvs;
 		std::vector<PipelineComponent> viewports;
 		PipelineComponent dsv;
+		PipelineComponent rasterizerState;
 		PipelineComponent blendState;
 		PipelineComponent drawCall;
 	};
