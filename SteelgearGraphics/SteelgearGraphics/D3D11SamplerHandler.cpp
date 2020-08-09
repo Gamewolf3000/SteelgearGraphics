@@ -20,7 +20,58 @@ SG::SGResult SG::D3D11SamplerHandler::CreateSampler(const SGGuid & guid, Filter 
 	desc.AddressW = TranslateAdressMode(adressW);
 	desc.MipLODBias = mipLODBias;
 	desc.MaxAnisotropy = maxAnisotropy;
-	// CONTINUE https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_sampler_desc
+	desc.ComparisonFunc = TranslateComparisonFunction(comparisonFunc);
+	memcpy(desc.BorderColor, borderColor, sizeof(FLOAT) * 4);
+	desc.MinLOD = minLOD;
+	desc.MaxLOD = maxLOD;
+
+	D3D11SamplerData toStore;
+	if(FAILED(device->CreateSamplerState(&desc, &toStore.sampler)))
+		return SGResult::FAIL;
+
+	samplers.lock();
+	samplers[guid] = toStore;
+	samplers.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11SamplerHandler::BindSamplerToEntity(const SGGraphicalEntityID & entity, const SGGuid & samplerGuid, const SGGuid & bindGuid)
+{
+	entityData.lock();
+	entityData[entity][bindGuid] = samplerGuid;
+	entityData.unlock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		samplers.lock();
+		if (samplers.find(samplerGuid) == samplers.end())
+		{
+			samplers.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		samplers.unlock();
+	}
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11SamplerHandler::BindSamplerToGroup(const SGGuid & group, const SGGuid & samplerGuid, const SGGuid & bindGuid)
+{
+	groupData.lock();
+	groupData[group][bindGuid] = samplerGuid;
+	groupData.unlock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		samplers.lock();
+		if (samplers.find(samplerGuid) == samplers.end())
+		{
+			samplers.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		samplers.unlock();
+	}
 
 	return SGResult::OK;
 }
@@ -137,12 +188,15 @@ D3D11_FILTER SG::D3D11SamplerHandler::TranslateFilter(const Filter & filter)
 	case SG::Filter::MAXIMUM_ANISOTROPIC:
 		return D3D11_FILTER_MAXIMUM_ANISOTROPIC;
 		break;
+	default:
+		throw std::runtime_error("Error, unknown filter type");
+		break;
 	}
 }
 
 D3D11_TEXTURE_ADDRESS_MODE SG::D3D11SamplerHandler::TranslateAdressMode(const TextureAdressMode & adressMode)
 {
-	switch (TextureAdressMode)
+	switch (adressMode)
 	{
 	case SG::TextureAdressMode::WRAP:
 		return D3D11_TEXTURE_ADDRESS_WRAP;
@@ -159,5 +213,102 @@ D3D11_TEXTURE_ADDRESS_MODE SG::D3D11SamplerHandler::TranslateAdressMode(const Te
 	case SG::TextureAdressMode::MIRROR_ONCE:
 		return D3D11_TEXTURE_ADDRESS_MIRROR_ONCE;
 		break;
+	default:
+		throw std::runtime_error("Error, unknown texture adress mode");
+		break;
 	}
+}
+
+D3D11_COMPARISON_FUNC SG::D3D11SamplerHandler::TranslateComparisonFunction(const ComparisonFunction & compFunc)
+{
+	switch (compFunc)
+	{
+	case SG::ComparisonFunction::NEVER:
+		return D3D11_COMPARISON_NEVER;
+		break;
+	case SG::ComparisonFunction::LESS:
+		return D3D11_COMPARISON_LESS;
+		break;
+	case SG::ComparisonFunction::EQUAL:
+		return D3D11_COMPARISON_EQUAL;
+		break;
+	case SG::ComparisonFunction::LESS_EQUAL:
+		return D3D11_COMPARISON_LESS_EQUAL;
+		break;
+	case SG::ComparisonFunction::GREATER:
+		return D3D11_COMPARISON_GREATER;
+		break;
+	case SG::ComparisonFunction::NOT_EQUAL:
+		return D3D11_COMPARISON_NOT_EQUAL;
+		break;
+	case SG::ComparisonFunction::GREATER_EQUAL:
+		return D3D11_COMPARISON_GREATER_EQUAL;
+		break;
+	case SG::ComparisonFunction::ALWAYS:
+		return D3D11_COMPARISON_ALWAYS;
+		break;
+	default:
+		throw std::runtime_error("Error, unknown comparison function");
+		break;
+	}
+}
+
+ID3D11SamplerState * SG::D3D11SamplerHandler::GetSamplerState(const SGGuid & guid)
+{
+	samplers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (samplers.find(guid) == samplers.end())
+		{
+			samplers.unlock();
+			throw std::runtime_error("Error, missing guid when fetching sampler state");
+		}
+	}
+
+	ID3D11SamplerState* toReturn = samplers[guid].sampler;
+	samplers.unlock();
+	return toReturn;
+}
+
+ID3D11SamplerState * SG::D3D11SamplerHandler::GetSamplerState(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	groupData.lock();
+	samplers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (samplers.find(groupData[groupGuid][guid].GetActive()) == samplers.end())
+		{
+			samplers.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error, missing guid when fetching sampler state");
+		}
+	}
+
+	ID3D11SamplerState* toReturn = samplers[groupData[groupGuid][guid].GetActive()].sampler;
+	samplers.unlock();
+	groupData.unlock();
+	return toReturn;
+}
+
+ID3D11SamplerState * SG::D3D11SamplerHandler::GetSamplerState(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	entityData.lock();
+	samplers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (samplers.find(entityData[entity][guid].GetActive()) == samplers.end())
+		{
+			samplers.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error, missing guid when fetching sampler state");
+		}
+	}
+
+	ID3D11SamplerState* toReturn = samplers[entityData[entity][guid].GetActive()].sampler;
+	samplers.unlock();
+	entityData.unlock();
+	return toReturn;
 }

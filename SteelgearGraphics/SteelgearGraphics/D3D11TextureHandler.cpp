@@ -292,41 +292,37 @@ SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGui
 	return SGResult::OK;
 }
 
-SG::SGResult SG::D3D11TextureHandler::BindTextureToEntity(const SGGraphicalEntityID & entity, const SGGuid & textureGuid, const SGGuid & bindGuid)
+SG::SGResult SG::D3D11TextureHandler::BindViewToEntity(const SGGraphicalEntityID & entity, const SGGuid & viewGuid, const SGGuid & bindGuid)
 {
-	entityData.lock();
-	entityData[entity][bindGuid] = textureGuid;
-	entityData.unlock();
+	this->UpdateEntity(entity, viewGuid, bindGuid);
 
 	if constexpr (DEBUG_VERSION)
 	{
-		textures.lock();
-		if (textures.find(textureGuid) == textures.end())
+		views.lock();
+		if (views.find(viewGuid) == views.end())
 		{
-			textures.unlock();
+			views.unlock();
 			return SGResult::GUID_MISSING;
 		}
-		textures.unlock();
+		views.unlock();
 	}
 
 	return SGResult::OK;
 }
 
-SG::SGResult SG::D3D11TextureHandler::BindTextureToGroup(const SGGuid & group, const SGGuid & textureGuid, const SGGuid & bindGuid)
+SG::SGResult SG::D3D11TextureHandler::BindViewToGroup(const SGGuid & group, const SGGuid & viewGuid, const SGGuid & bindGuid)
 {
-	groupData.lock();
-	groupData[group][bindGuid] = textureGuid;
-	groupData.unlock();
+	UpdateGroup(group, viewGuid, bindGuid);
 
 	if constexpr (DEBUG_VERSION)
 	{
-		textures.lock();
-		if (textures.find(textureGuid) == textures.end())
+		views.lock();
+		if (views.find(viewGuid) == views.end())
 		{
-			textures.unlock();
+			views.unlock();
 			return SGResult::GUID_MISSING;
 		}
-		textures.unlock();
+		views.unlock();
 	}
 
 	return SGResult::OK;

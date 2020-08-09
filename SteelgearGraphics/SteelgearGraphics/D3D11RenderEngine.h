@@ -24,6 +24,7 @@ namespace SG
 		~D3D11RenderEngine();
 
 		D3D11BufferHandler* BufferHandler();
+		D3D11SamplerHandler* SamplerHandler();
 		D3D11ShaderManager* ShaderManager();
 		D3D11StateHandler* StateHandler();
 		D3D11TextureHandler* TextureHandler();
@@ -63,6 +64,7 @@ namespace SG
 
 		void SetConstantBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetShaderResourceViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetSamplerStates(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetVertexBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetIndexBuffer(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetOMViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
@@ -71,7 +73,9 @@ namespace SG
 		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetConstantBuffersForShader(const std::vector<PipelineComponent>& buffers, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer*const*));
 		void SetShaderResourceViewsForShader(const std::vector<PipelineComponent>& srvs, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11ShaderResourceView *const*));
+		void SetSamplerStatesForShader(const std::vector<PipelineComponent>& samplers, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11SamplerState *const*));
 		ID3D11Buffer* GetBuffer(const PipelineComponent& component, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		ID3D11SamplerState* GetSamplerState(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		UINT GetOffset(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		UINT GetStride(const PipelineComponent& component, const SGGraphicalEntityID& entity);
 		UINT GetStrideFromVB(const PipelineComponent& component, const SGGraphicalEntityID& entity);

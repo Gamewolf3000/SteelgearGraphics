@@ -10,7 +10,7 @@ SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SG
 {
 	this->CreateDeviceAndContext(settings);
 	bufferHandler = new D3D11BufferHandler(device);
-	//samplerHandler;
+	samplerHandler = new D3D11SamplerHandler(device);
 	shaderManager = new D3D11ShaderManager(device);
 	this->stateHandler = new D3D11StateHandler(device);
 	this->textureHandler = new D3D11TextureHandler(device);
@@ -35,14 +35,22 @@ SG::D3D11RenderEngine::~D3D11RenderEngine()
 		ReleaseCOM(context);
 
 	delete bufferHandler;
+	delete samplerHandler;
 	delete shaderManager;
+	delete stateHandler;
 	delete textureHandler;
 	delete pipelineManager;
+	delete drawCallHandler;
 }
 
 SG::D3D11BufferHandler * SG::D3D11RenderEngine::BufferHandler()
 {
 	return bufferHandler;
+}
+
+SG::D3D11SamplerHandler * SG::D3D11RenderEngine::SamplerHandler()
+{
+	return samplerHandler;
 }
 
 SG::D3D11ShaderManager * SG::D3D11RenderEngine::ShaderManager()
@@ -148,13 +156,19 @@ void SG::D3D11RenderEngine::CreateSwapChain(const SGRenderSettings & settings)
 void SG::D3D11RenderEngine::SwapUpdateBuffer()
 {
 	bufferHandler->SwapUpdateBuffer();
+	samplerHandler->SwapUpdateBuffer();
+	stateHandler->SwapUpdateBuffer();
 	textureHandler->SwapUpdateBuffer();
+	drawCallHandler->SwapUpdateBuffer();
 }
 
 void SG::D3D11RenderEngine::SwapToWorkWithBuffer()
 {
 	bufferHandler->SwapToWorkWithBuffer();
+	samplerHandler->SwapUpdateBuffer();
+	stateHandler->SwapToWorkWithBuffer();
 	textureHandler->SwapToWorkWithBuffer();
+	drawCallHandler->SwapToWorkWithBuffer();
 }
 
 void SG::D3D11RenderEngine::ExecuteJobs(const std::vector<SGGraphicsJob>& jobs)
@@ -276,10 +290,11 @@ void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const
 {
 	for (auto& entity : entities)
 	{
-		SetConstantBuffers(job, entity, context);
-		SetShaderResourceViews(job, entity, context);
 		SetVertexBuffers(job, entity, context);
 		SetIndexBuffer(job, entity, context);
+		SetConstantBuffers(job, entity, context);
+		SetShaderResourceViews(job, entity, context);
+		SetSamplerStates(job, entity, context);
 		SetViewports(job, entity, context);
 		SetStates(job, entity, context);
 		SetOMViews(job, entity, context);
@@ -303,6 +318,15 @@ void SG::D3D11RenderEngine::SetShaderResourceViews(const SGRenderJob & job, cons
 	SetShaderResourceViewsForShader(job.domainShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::DSSetShaderResources);
 	SetShaderResourceViewsForShader(job.geometryShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::GSSetShaderResources);
 	SetShaderResourceViewsForShader(job.pixelShader.shaderResourceViews, entity, context, &ID3D11DeviceContext::PSSetShaderResources);
+}
+
+void SG::D3D11RenderEngine::SetSamplerStates(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
+{
+	SetSamplerStatesForShader(job.vertexShader.samplers, entity, context, &ID3D11DeviceContext::VSSetSamplers);
+	SetSamplerStatesForShader(job.hullShader.samplers, entity, context, &ID3D11DeviceContext::HSSetSamplers);
+	SetSamplerStatesForShader(job.domainShader.samplers, entity, context, &ID3D11DeviceContext::DSSetSamplers);
+	SetSamplerStatesForShader(job.geometryShader.samplers, entity, context, &ID3D11DeviceContext::GSSetSamplers);
+	SetSamplerStatesForShader(job.pixelShader.samplers, entity, context, &ID3D11DeviceContext::PSSetSamplers);
 }
 
 void SG::D3D11RenderEngine::SetVertexBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
@@ -427,6 +451,17 @@ void SG::D3D11RenderEngine::SetShaderResourceViewsForShader(const std::vector<Pi
 	(context->*func)(0, arrSize, srvArr);
 }
 
+void SG::D3D11RenderEngine::SetSamplerStatesForShader(const std::vector<PipelineComponent>& samplers, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context, void(_stdcall ID3D11DeviceContext::* func)(UINT, UINT, ID3D11SamplerState * const *))
+{
+	const UINT arrSize = D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT;
+	ID3D11SamplerState* samplerArr[arrSize] = {};
+	UINT counter = 0;
+	for (auto& sampler : samplers)
+		samplerArr[counter++] = GetSamplerState(sampler, entity);
+
+	(context->*func)(0, arrSize, samplerArr);
+}
+
 ID3D11Buffer * SG::D3D11RenderEngine::GetBuffer(const PipelineComponent & component, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
 {
 	ID3D11Buffer* toReturn = nullptr;
@@ -449,6 +484,36 @@ ID3D11Buffer * SG::D3D11RenderEngine::GetBuffer(const PipelineComponent & compon
 	{
 		entityMutex.lock();
 		toReturn = bufferHandler->GetBuffer(component.resourceGuid, context, entity);
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+ID3D11SamplerState * SG::D3D11RenderEngine::GetSamplerState(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	ID3D11SamplerState * toReturn = nullptr;
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = samplerHandler->GetSamplerState(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = samplerHandler->GetSamplerState(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = samplerHandler->GetSamplerState(component.resourceGuid, entity);
 		entityMutex.unlock();
 	}
 	break;

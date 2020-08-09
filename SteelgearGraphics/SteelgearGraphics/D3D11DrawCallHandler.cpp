@@ -109,18 +109,17 @@ SG::SGResult SG::D3D11DrawCallHandler::BindDrawCallToGroup(const SGGuid & group,
 
 SG::D3D11DrawCallHandler::DrawCall SG::D3D11DrawCallHandler::GetDrawCall(const SGGuid & guid)
 {
+	drawCalls.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		drawCalls.lock();
 		if (drawCalls.find(guid) == drawCalls.end())
 		{
 			drawCalls.unlock();
-			throw std::runtime_error("Error, missing guid when fetching buffer");
+			throw std::runtime_error("Error, missing guid when fetching draw call");
 		}
-		drawCalls.unlock();
 	}
 
-	drawCalls.lock();
 	DrawCall& toReturn = drawCalls[guid];
 	drawCalls.unlock();
 	return toReturn;
@@ -128,22 +127,19 @@ SG::D3D11DrawCallHandler::DrawCall SG::D3D11DrawCallHandler::GetDrawCall(const S
 
 SG::D3D11DrawCallHandler::DrawCall SG::D3D11DrawCallHandler::GetDrawCall(const SGGuid & guid, const SGGuid & groupGuid)
 {
+	groupData.lock();
+	drawCalls.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		groupData.lock();
-		drawCalls.lock();
 		if (drawCalls.find(groupData[groupGuid][guid].GetActive()) == drawCalls.end())
 		{
 			drawCalls.unlock();
 			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching buffer");
+			throw std::runtime_error("Error, missing guid when fetching draw call");
 		}
-		drawCalls.unlock();
-		groupData.unlock();
 	}
 
-	groupData.lock();
-	drawCalls.lock();
 	DrawCall& toReturn = drawCalls[groupData[groupGuid][guid].GetActive()];
 	drawCalls.unlock();
 	groupData.unlock();
@@ -152,22 +148,19 @@ SG::D3D11DrawCallHandler::DrawCall SG::D3D11DrawCallHandler::GetDrawCall(const S
 
 SG::D3D11DrawCallHandler::DrawCall SG::D3D11DrawCallHandler::GetDrawCall(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
+	entityData.lock();
+	drawCalls.lock();
+
 	if constexpr (DEBUG_VERSION)
 	{
-		entityData.lock();
-		drawCalls.lock();
 		if (drawCalls.find(entityData[entity][guid].GetActive()) == drawCalls.end())
 		{
 			drawCalls.unlock();
 			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching buffer");
+			throw std::runtime_error("Error, missing guid when fetching draw call");
 		}
-		drawCalls.unlock();
-		entityData.unlock();
 	}
 
-	entityData.lock();
-	drawCalls.lock();
 	DrawCall& toReturn = drawCalls[entityData[entity][guid].GetActive()];
 	drawCalls.unlock();
 	entityData.unlock();
