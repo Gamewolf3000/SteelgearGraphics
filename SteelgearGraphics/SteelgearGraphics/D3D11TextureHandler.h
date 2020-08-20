@@ -58,6 +58,7 @@ namespace SG
 		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
 		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice);
+		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid);
 		SGResult CreateDSVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
 
 		SGResult BindViewToEntity(const SGGraphicalEntityID& entity, const SGGuid& viewGuid, const SGGuid& bindGuid);

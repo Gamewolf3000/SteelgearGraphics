@@ -63,15 +63,23 @@ SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const
 	desc.MiscFlags = 0 | (generalSettings.generateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0) | (generalSettings.resourceClamp ? D3D11_RESOURCE_MISC_RESOURCE_CLAMP : 0);
 	desc.MiscFlags |= (texturecube ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0);
 
-	D3D11_SUBRESOURCE_DATA data;
-	data.pSysMem = generalSettings.data;
-	data.SysMemPitch = width * GetFormatElementSize(generalSettings.format);
-	data.SysMemSlicePitch = 0;
-
 	ID3D11Texture2D* texture;
 
-	if (FAILED(device->CreateTexture2D(&desc, &data, &texture)))
-		return SGResult::FAIL;
+	if (generalSettings.data)
+	{
+		D3D11_SUBRESOURCE_DATA data;
+		data.pSysMem = generalSettings.data;
+		data.SysMemPitch = width * GetFormatElementSize(generalSettings.format);
+		data.SysMemSlicePitch = 0;
+
+		if (FAILED(device->CreateTexture2D(&desc, &data, &texture)))
+			return SGResult::FAIL;
+	}
+	else
+	{
+		if (FAILED(device->CreateTexture2D(&desc, nullptr, &texture)))
+			return SGResult::FAIL;
+	}
 
 	D3D11TextureData toStore;
 	toStore.type = arraySize <= 1 ? TextureType::TEXTURE_2D : TextureType::TEXTURE_ARRAY_2D;
@@ -257,7 +265,7 @@ SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGui
 	textures.unlock();
 
 
-	D3D11_DEPTH_STENCIL_VIEW_DESC  desc;
+	D3D11_DEPTH_STENCIL_VIEW_DESC desc;
 	desc.Format = format;
 	desc.ViewDimension = GetDSVDimension(storedData->second.type);
 	desc.Flags = 0 | (readOnlyDepth ? D3D11_DSV_READ_ONLY_DEPTH : 0) | (readOnlyStencil ? D3D11_DSV_READ_ONLY_STENCIL : 0);
@@ -282,6 +290,30 @@ SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGui
 	toStore.type = ResourceViewType::DSV;
 
 	if (FAILED(device->CreateDepthStencilView(storedData->second.texture.texture2D, &desc, &toStore.view.dsv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGuid & textureGuid)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+		return SGResult::GUID_MISSING;
+
+	textures.unlock();
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::DSV;
+
+	if (FAILED(device->CreateDepthStencilView(storedData->second.texture.texture2D, nullptr, &toStore.view.dsv)))
 		return SGResult::FAIL;
 
 	toStore.resourceGuid = textureGuid;

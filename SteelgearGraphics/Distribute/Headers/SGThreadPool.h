@@ -5,6 +5,7 @@
 #include <vector>
 #include <queue>
 #include <condition_variable>
+#include <atomic>
 
 namespace SG
 {
@@ -22,7 +23,7 @@ namespace SG
 		struct StoredFunction
 		{
 			std::function<void(void)> function;
-			FunctionStatus* statusPtr = nullptr;
+			std::atomic<FunctionStatus>* statusPtr = nullptr;
 		};
 
 		std::vector<bool> threadStatus;
@@ -37,13 +38,15 @@ namespace SG
 		SGThreadPool(int nrOfThreadsInPool);
 		~SGThreadPool();
 
-		void EnqueFunction(FunctionStatus* statusPtr, const std::function<void(void)>& function);
+		void EnqueFunction(std::atomic<FunctionStatus>* statusPtr, const std::function<void(void)>& function);
 
 		template<class returnType, class... argTypes>
-		void EnqueFunction(FunctionStatus* statusPtr, const std::function<returnType(argTypes...)>& function, argTypes&&... arguments);
+		void EnqueFunction(std::atomic<FunctionStatus>* statusPtr, const std::function<returnType(argTypes...)>& function, argTypes&&... arguments);
 
 		template<class returnType, class... argTypes>
-		void EnqueFunction(FunctionStatus* statusPtr, returnType(*function)(argTypes...), argTypes&&... arguments);
+		void EnqueFunction(std::atomic<FunctionStatus>* statusPtr, returnType(*function)(argTypes...), argTypes&&... arguments);
+
+		bool FunctionsEnqued();
 	};
 
 
@@ -52,13 +55,13 @@ namespace SG
 }
 
 template<class returnType, class ...argTypes>
-inline void SG::SGThreadPool::EnqueFunction(FunctionStatus* statusPtr, const std::function<returnType(argTypes...)>& function, argTypes&&... arguments)
+inline void SG::SGThreadPool::EnqueFunction(std::atomic<FunctionStatus>* statusPtr, const std::function<returnType(argTypes...)>& function, argTypes&&... arguments)
 {
 	EnqueFunction(statusPtr, std::bind(function, arguments...));
 }
 
 template<class returnType, class ...argTypes>
-inline void SG::SGThreadPool::EnqueFunction(FunctionStatus* statusPtr, returnType(*function)(argTypes...), argTypes && ...arguments)
+inline void SG::SGThreadPool::EnqueFunction(std::atomic<FunctionStatus>* statusPtr, returnType(*function)(argTypes...), argTypes && ...arguments)
 {
 	EnqueFunction(statusPtr, std::bind(function, arguments...));
 }
