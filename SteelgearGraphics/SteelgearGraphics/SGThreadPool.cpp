@@ -41,10 +41,11 @@ void SG::SGThreadPool::EnqueFunction(FunctionStatus* statusPtr, const std::funct
 {
 	functionMutex.lock();
 	functionsToExecute.push({ function, statusPtr });
-	functionMutex.unlock();
 
 	if (statusPtr)
 		*statusPtr = FunctionStatus::ENQUEUED;
+
+	functionMutex.unlock();
 
 	cv.notify_one();
 }
