@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include "LockableUnorderedMap.h"
 
 namespace SG
 {
@@ -10,7 +10,7 @@ namespace SG
 	private:
 
 
-		static std::unordered_map<std::string, size_t> guids;
+		static LockableUnorderedMap<std::string, size_t> guids;
 		size_t myID;
 
 	public:

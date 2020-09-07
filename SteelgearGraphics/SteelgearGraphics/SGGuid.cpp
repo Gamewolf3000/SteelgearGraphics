@@ -2,7 +2,7 @@
 
 namespace SG
 {
-	std::unordered_map<std::string, size_t> SGGuid::guids;
+	LockableUnorderedMap<std::string, size_t> SGGuid::guids;
 
 	SG::SGGuid::SGGuid()
 	{
@@ -11,6 +11,7 @@ namespace SG
 
 	SGGuid::SGGuid(const std::string& identifier)
 	{
+		guids.lock();
 		auto target = guids.find(identifier);
 
 		if (target == guids.end())
@@ -22,6 +23,7 @@ namespace SG
 		{
 			myID = guids[identifier];
 		}
+		guids.unlock();
 	}
 
 	SGGuid::~SGGuid()

@@ -1,11 +1,6 @@
 #include "D3D11RenderEngine.h"
 #include "D3D11CommonTypes.h"
 
-//Klura ut problemet med att den ibland inte exitar korrekt från trådpolen
-//Fixa så det går att skapa och använda viewport
-//Lägg till cbuffer i testet och rendera kuben korrekt
-//Döp om vissa saker (statehandler till annat? Pipelinejob (som man skickar till render) till GraphicJob?)
-
 SG::D3D11RenderEngine::D3D11RenderEngine(const SGRenderSettings & settings) : SGRenderEngine(settings)
 {
 	this->CreateDeviceAndContext(settings);
