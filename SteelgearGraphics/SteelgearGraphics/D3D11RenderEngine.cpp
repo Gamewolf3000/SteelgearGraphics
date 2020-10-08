@@ -281,6 +281,29 @@ void SG::D3D11RenderEngine::SetShaders(const SGRenderJob & job, ID3D11DeviceCont
 	shaderManager->SetPixelShader(job.pixelShader.shader, context);
 }
 
+void SG::D3D11RenderEngine::HandleGroupRenderJob(const SGRenderJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
+{
+	
+	SG::SGGuid currentGroupGuid = SG::SGGuid();
+
+	for (auto& entity : entities)
+	{
+		if (graphicalEntities[entity].groupGuid == currentGroupGuid)
+			continue;
+
+		currentGroupGuid = graphicalEntities[entity].groupGuid;
+		SetVertexBuffers(job, entity, context);
+		SetIndexBuffer(job, entity, context);
+		SetConstantBuffers(job, entity, context);
+		SetShaderResourceViews(job, entity, context);
+		SetSamplerStates(job, entity, context);
+		SetViewports(job, entity, context);
+		SetStates(job, entity, context);
+		SetOMViews(job, entity, context);
+		//ExecuteDrawCall(job, entity, context);
+	}
+}
+
 void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
 {
 	for (auto& entity : entities)

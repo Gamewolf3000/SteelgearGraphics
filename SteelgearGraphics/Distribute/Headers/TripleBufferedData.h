@@ -90,8 +90,10 @@ template<class T>
 inline void TripleBufferedData<T>::MarkAsNotUpdated()
 {
 	// If an update has been made after last switch we want to consider us updated externally as well so that an update is not missed
-	updatedReturn = updatedInternal;
-	updatedInternal = false;
+	//updatedReturn = updatedInternal;
+	//updatedInternal = false;
+
+	updatedReturn = false;
 }
 
 template<class T>
@@ -145,43 +147,7 @@ inline void TripleBufferedData<T>::SwitchUpdateBuffer()
 	lastUpdated = nextToUpdate;
 	nextToUpdate = 3 - currentlyActive - nextToUpdate;
 
-	// Logic behind above equation is derived from the following cases
-	/*
-	switch (currentlyActive)
-	{
-	case 0:
-		switch (nextToUpdate)
-		{
-		case 1:
-			nextToUpdate = 2;
-			break;
-		case 2:
-			nextToUpdate = 1;
-			break;
-		}
-		break;
-	case 1:
-		switch (nextToUpdate)
-		{
-		case 0:
-			nextToUpdate = 2;
-			break;
-		case 2:
-			nextToUpdate = 0;
-			break;
-		}
-		break;
-	case 2:
-		switch (nextToUpdate)
-		{
-		case 0:
-			nextToUpdate = 1;
-			break;
-		case 1:
-			nextToUpdate = 0;
-			break;
-		}
-		break;
-	}
-	*/
+	// This should be safe, and protect from problems with multiple switches on same update
+	updatedInternal = false; 
+	updatedReturn = true;
 }

@@ -58,7 +58,6 @@ namespace SG
 		RenderShader domainShader;
 		RenderShader geometryShader;
 		RenderShader pixelShader;
-		std::vector<PipelineComponent> uavs;
 		std::vector<PipelineComponent> rtvs;
 		std::vector<PipelineComponent> viewports;
 		PipelineComponent dsv;

@@ -230,10 +230,11 @@ ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11Devi
 	}
 
 	D3D11BufferData& bData = buffers[guid];
-	buffers.unlock();
 
 	if(bData.updatedData.Updated())
 		UpdateBufferGPU(bData, context);
+
+	buffers.unlock();
 
 	return bData.buffer;
 }
