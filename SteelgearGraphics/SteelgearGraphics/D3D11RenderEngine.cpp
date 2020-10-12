@@ -243,7 +243,7 @@ void SG::D3D11RenderEngine::HandleRenderJob(const SGRenderJob & job, const std::
 	}
 	else if (job.association == Association::GROUP)
 	{
-		//HandleGroupRenderJob(job, entities, context);
+		HandleGroupRenderJob(job, entities, context);
 	}
 	else if (job.association == Association::ENTITY)
 	{
@@ -283,15 +283,21 @@ void SG::D3D11RenderEngine::SetShaders(const SGRenderJob & job, ID3D11DeviceCont
 
 void SG::D3D11RenderEngine::HandleGroupRenderJob(const SGRenderJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
 {
-	
-	SG::SGGuid currentGroupGuid = SG::SGGuid();
+	entityMutex.lock();
+	SG::SGGuid currentGroupGuid = graphicalEntities[entities[0]].groupGuid;
+	entityMutex.unlock();
+	unsigned int nrInGroup = 0;
 
-	for (auto& entity : entities)
+	for (auto it = entities.begin() + 1; it != entities.end(); ++it)
 	{
-		if (graphicalEntities[entity].groupGuid == currentGroupGuid)
-			continue;
+		entityMutex.lock();
 
-		currentGroupGuid = graphicalEntities[entity].groupGuid;
+		while (it != entities.end() && graphicalEntities[*it].groupGuid == currentGroupGuid)
+			++nrInGroup;
+
+		SG::SGGraphicalEntityID entity = it != entities.end() ? *it : *( it - 1 );
+		entityMutex.unlock();
+
 		SetVertexBuffers(job, entity, context);
 		SetIndexBuffer(job, entity, context);
 		SetConstantBuffers(job, entity, context);
@@ -300,7 +306,13 @@ void SG::D3D11RenderEngine::HandleGroupRenderJob(const SGRenderJob & job, const 
 		SetViewports(job, entity, context);
 		SetStates(job, entity, context);
 		SetOMViews(job, entity, context);
-		//ExecuteDrawCall(job, entity, context);
+		ExecuteDrawCall(job, entity, nrInGroup, context);
+
+		if (it != entities.end())
+		{
+			nrInGroup = 1;
+			currentGroupGuid = graphicalEntities[entity].groupGuid;
+		}
 	}
 }
 
@@ -425,6 +437,35 @@ void SG::D3D11RenderEngine::SetStates(const SGRenderJob & job, const SGGraphical
 	//depthstencilstate
 }
 
+void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGraphicalEntityID& entity, unsigned int nrInGroup, ID3D11DeviceContext * context)
+{
+	SG::D3D11DrawCallHandler::DrawCall drawCall = GetDrawCall(job.drawCall, entity);
+
+	switch (drawCall.type)
+	{
+	case SG::D3D11DrawCallHandler::DrawType::DRAW:
+		context->Draw(GetVertexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.draw.startVertexLocation);
+		break;
+	case SG::D3D11DrawCallHandler::DrawType::DRAW_INDEXED:
+		context->DrawIndexed(GetIndexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.drawIndexed.startIndexLocation, drawCall.data.drawIndexed.baseVertexLocation);
+		break;
+	case SG::D3D11DrawCallHandler::DrawType::DRAW_INSTANCED:
+		SG::D3D11DrawCallHandler::DrawInstancedData drawInstanced = drawCall.data.drawInstanced;
+		context->DrawInstanced(GetVertexCount(job, drawInstanced.vertexCountPerInstance, entity),
+							   drawInstanced.instanceCount == 0 ? nrInGroup : drawInstanced.instanceCount,
+							   drawInstanced.startVertexLocation, drawInstanced.startInstanceLocation);
+		break;
+	case SG::D3D11DrawCallHandler::DrawType::DRAW_INDEXED_INSTANCED:
+		SG::D3D11DrawCallHandler::DrawIndexedInstanced drawIndexedInstanced = drawCall.data.drawIndexedInstanced;
+		context->DrawIndexedInstanced(GetIndexCount(job, drawIndexedInstanced.indexCountPerInstance, entity),
+									  drawIndexedInstanced.instanceCount == 0 ? nrInGroup : drawIndexedInstanced.instanceCount,
+									  drawIndexedInstanced.startIndexLocation, drawIndexedInstanced.baseVertexLocation,
+									  drawIndexedInstanced.startInstanceLocation);
+		break;
+	}
+
+}
+
 void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
 {
 	SG::D3D11DrawCallHandler::DrawCall drawCall = GetDrawCall(job.drawCall, entity);
@@ -438,10 +479,15 @@ void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGra
 		context->DrawIndexed(GetIndexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.drawIndexed.startIndexLocation, drawCall.data.drawIndexed.baseVertexLocation);
 		break;
 	case SG::D3D11DrawCallHandler::DrawType::DRAW_INSTANCED:
-		// FIX LATER
+		SG::D3D11DrawCallHandler::DrawInstancedData drawInstanced = drawCall.data.drawInstanced;
+		context->DrawInstanced(GetVertexCount(job, drawInstanced.vertexCountPerInstance, entity),
+			drawInstanced.instanceCount, drawInstanced.startVertexLocation, drawInstanced.startInstanceLocation);
 		break;
 	case SG::D3D11DrawCallHandler::DrawType::DRAW_INDEXED_INSTANCED:
-		// FIX LATER
+		SG::D3D11DrawCallHandler::DrawIndexedInstanced drawIndexedInstanced = drawCall.data.drawIndexedInstanced;
+		context->DrawIndexedInstanced(GetIndexCount(job, drawIndexedInstanced.indexCountPerInstance, entity),
+			drawIndexedInstanced.instanceCount, drawIndexedInstanced.startIndexLocation,
+			drawIndexedInstanced.baseVertexLocation, drawIndexedInstanced.startInstanceLocation);
 		break;
 	}
 
