@@ -70,6 +70,7 @@ namespace SG
 		void SetOMViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetViewports(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetStates(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, unsigned int nrInGroup, ID3D11DeviceContext* context);
 		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void SetConstantBuffersForShader(const std::vector<PipelineComponent>& buffers, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer*const*));
 		void SetShaderResourceViewsForShader(const std::vector<PipelineComponent>& srvs, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11ShaderResourceView *const*));

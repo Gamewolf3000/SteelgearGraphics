@@ -286,17 +286,21 @@ void SG::D3D11RenderEngine::HandleGroupRenderJob(const SGRenderJob & job, const 
 	entityMutex.lock();
 	SG::SGGuid currentGroupGuid = graphicalEntities[entities[0]].groupGuid;
 	entityMutex.unlock();
-	unsigned int nrInGroup = 0;
+	unsigned int nrInGroup = 1;
 
 	for (auto it = entities.begin() + 1; it != entities.end(); ++it)
 	{
 		entityMutex.lock();
 
 		while (it != entities.end() && graphicalEntities[*it].groupGuid == currentGroupGuid)
+		{
 			++nrInGroup;
+			++it;
+		}
 
-		SG::SGGraphicalEntityID entity = it != entities.end() ? *it : *( it - 1 );
 		entityMutex.unlock();
+
+		SG::SGGraphicalEntityID entity = *(it - 1);
 
 		SetVertexBuffers(job, entity, context);
 		SetIndexBuffer(job, entity, context);
@@ -312,6 +316,10 @@ void SG::D3D11RenderEngine::HandleGroupRenderJob(const SGRenderJob & job, const 
 		{
 			nrInGroup = 1;
 			currentGroupGuid = graphicalEntities[entity].groupGuid;
+		}
+		else
+		{
+			break; // We cannot iterate past end
 		}
 	}
 }
