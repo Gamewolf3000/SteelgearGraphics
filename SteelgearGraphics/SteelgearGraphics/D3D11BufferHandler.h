@@ -32,12 +32,12 @@ namespace SG
 		/**
 			bufferGuid is the BufferData to create a SRV for
 		*/
-		SGResult CreateSRV(const SGGuid& guid, const SGGuid& bufferGuid, UINT firstElement, UINT numberOfElements);
+		SGResult CreateSRV(const SGGuid& guid, const SGGuid& bufferGuid, DXGI_FORMAT format, UINT elementOffset, UINT elementWidth);
 
 		/**
 			bufferGuid is the BufferData to create a UAV for
 		*/
-		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, UINT firstElement, UINT numberOfElements);
+		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, DXGI_FORMAT format, UINT firstElement, UINT numberOfElements, bool counter, bool append, bool raw);
 
 		SGResult BindBufferToEntity(const SGGraphicalEntityID& entity, const SGGuid& bufferGuid, const SGGuid& bindGuid);
 		SGResult BindBufferToGroup(const SGGuid& group, const SGGuid& bufferGuid, const SGGuid& bindGuid);

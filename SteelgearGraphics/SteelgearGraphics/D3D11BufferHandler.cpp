@@ -144,65 +144,6 @@ void SG::D3D11BufferHandler::SwapToWorkWithBuffer()
 
 	updatedTotalBuffer.clear();
 }
-/*
-void SG::D3D11BufferHandler::SetConstantBuffers(const std::vector<PipelineComponent>& vs, const std::vector<PipelineComponent>& hs, const std::vector<PipelineComponent>& ds, const std::vector<PipelineComponent>& gs, const std::vector<PipelineComponent>& ps, ID3D11DeviceContext * context, const SGGuid& groupGuid, const SGGraphicalEntityID& entity)
-{
-	const unsigned int arrSize = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
-	ID3D11Buffer * bufferArr[arrSize];
-
-	FillBufferArray(vs, bufferArr, arrSize, context, groupGuid, entity);
-	context->VSSetConstantBuffers(0, arrSize, bufferArr);
-
-	FillBufferArray(hs, bufferArr, arrSize, context, groupGuid, entity);
-	context->HSSetConstantBuffers(0, arrSize, bufferArr);
-
-	FillBufferArray(ds, bufferArr, arrSize, context, groupGuid, entity);
-	context->DSSetConstantBuffers(0, arrSize, bufferArr);
-
-	FillBufferArray(gs, bufferArr, arrSize, context, groupGuid, entity);
-	context->GSSetConstantBuffers(0, arrSize, bufferArr);
-
-	FillBufferArray(ps, bufferArr, arrSize, context, groupGuid, entity);
-	context->PSSetConstantBuffers(0, arrSize, bufferArr);
-}
-
-void SG::D3D11BufferHandler::FillBufferArray(const std::vector<PipelineComponent>& resources, ID3D11Buffer ** bufferArr, unsigned int arrSize, ID3D11DeviceContext* context, const SGGuid & groupGuid, const SGGraphicalEntityID & entity)
-{
-	for (unsigned int i = 0; i < arrSize; ++i)
-	{
-		if (resources.size() > i)
-		{
-			const SGGuid* bufferGuid = nullptr;
-			switch (resources[i].source)
-			{
-			case Association::ENTITY:
-				entityData.lock();
-				bufferGuid = &entityData[entity][resources[i].resourceGuid].GetActive();
-				entityData.unlock();
-				break;
-			case Association::GROUP:
-				groupData.lock();
-				bufferGuid = &groupData[groupGuid][resources[i].resourceGuid].GetActive();
-				groupData.unlock();
-				break;
-			case Association::GLOBAL:
-				bufferGuid = &resources[i].resourceGuid;
-				break;
-			}
-
-			buffers.lock();
-			D3D11BufferData& buffer = buffers[*bufferGuid];
-			buffers.unlock();
-
-			if (buffer.updatedData.Updated())
-				UpdateBufferGPU(buffer, context);
-
-			bufferArr[i] = buffer.buffer;
-		}
-		else
-			bufferArr[i] = nullptr;
-	}
-}*/
 
 void SG::D3D11BufferHandler::UpdateBufferGPU(D3D11BufferData & toUpdate, ID3D11DeviceContext * context)
 {
@@ -756,4 +697,77 @@ SG::SGResult SG::D3D11BufferHandler::CreateBufferStride(const SGGuid & guid, UIN
 	bufferStrides.unlock();
 
 	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11BufferHandler::CreateSRV(const SGGuid & guid, const SGGuid & bufferGuid, DXGI_FORMAT format, UINT elementOffset, UINT elementWidth)
+{
+	buffers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (buffers.find(bufferGuid) == buffers.end())
+		{
+			buffers.unlock();
+			entityData.unlock();
+			return SG::SGResult::GUID_MISSING;
+		}
+	}
+
+	ID3D11Buffer* buffer = (*buffers.find(bufferGuid)).second.buffer;
+	buffers.unlock();
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+	desc.Buffer.ElementOffset = elementOffset;
+	desc.Buffer.ElementWidth = elementWidth;
+
+	D3D11ResourceViewData toStore;
+	if(FAILED(device->CreateShaderResourceView(buffer, &desc, &toStore.view.srv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = bufferGuid;
+	toStore.type = SG::ResourceViewType::SRV;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SG::SGResult::OK;
+}
+
+SG::SGResult SG::D3D11BufferHandler::CreateUAV(const SGGuid & guid, const SGGuid & bufferGuid, DXGI_FORMAT format, UINT firstElement, UINT numberOfElements, bool counter, bool append, bool raw)
+{
+	buffers.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (buffers.find(bufferGuid) == buffers.end())
+		{
+			buffers.unlock();
+			entityData.unlock();
+			return SG::SGResult::GUID_MISSING;
+		}
+	}
+
+	ID3D11Buffer* buffer = (*buffers.find(bufferGuid)).second.buffer;
+	buffers.unlock();
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+	desc.Buffer.FirstElement = firstElement;
+	desc.Buffer.NumElements = numberOfElements;
+	desc.Buffer.Flags = 0 | (counter * D3D11_BUFFER_UAV_FLAG_COUNTER) | (append * D3D11_BUFFER_UAV_FLAG_APPEND) | (raw * D3D11_BUFFER_UAV_FLAG_RAW);
+
+	D3D11ResourceViewData toStore;
+	if (FAILED(device->CreateUnorderedAccessView(buffer, &desc, &toStore.view.uav)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = bufferGuid;
+	toStore.type = SG::ResourceViewType::UAV;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SG::SGResult::OK;
 }
