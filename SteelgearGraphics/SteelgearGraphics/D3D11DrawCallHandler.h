@@ -39,8 +39,14 @@ namespace SG
 		SGResult CreateDrawInstancedCall(const SGGuid& guid, UINT vertexCountPerInstance = BUFFER0, UINT instanceCount = 0, UINT startVertexLocation = 0, UINT startInstanceLocation = 0);
 		SGResult CreateDrawIndexedInstancedCall(const SGGuid& guid, UINT indexCountPerInstance = 0, UINT instanceCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0, UINT startInstanceLocation = 0);
 
+		SGResult CreateDispatchCall(const SGGuid& guid, UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ);
+		SGResult CreateDispatchIndirectCall(const SGGuid& guid, const SGGuid& bufferGuid, UINT alignedByteOffsetForArgs);
+
 		SGResult BindDrawCallToEntity(const SGGraphicalEntityID& entity, const SGGuid& callGuid, const SGGuid& bindGuid);
 		SGResult BindDrawCallToGroup(const SGGuid& group, const SGGuid& callGuid, const SGGuid& bindGuid);
+
+		SGResult BindDispatchCallToEntity(const SGGraphicalEntityID& entity, const SGGuid& callGuid, const SGGuid& bindGuid);
+		SGResult BindDispatchCallToGroup(const SGGuid& group, const SGGuid& callGuid, const SGGuid& bindGuid);
 
 	private:
 
@@ -96,12 +102,59 @@ namespace SG
 			} data;
 		};
 
+		struct DispatchData
+		{
+			UINT threadGroupCountX;
+			UINT threadGroupCountY;
+			UINT threadGroupCountZ;
+		};
+
+		struct DispatchIndirectData
+		{
+			SGGuid bufferForArgs;
+			UINT alignedByteOffsetForArgs;
+		};
+
+		struct DispatchCall
+		{
+			~DispatchCall()
+			{
+				if (indirect)
+					data.dispatch.~DispatchData();
+				else
+					data.dispatchIndirect.~DispatchIndirectData();
+			}
+
+			bool indirect;
+
+			union DispatchType
+			{
+				DispatchData dispatch;
+				DispatchIndirectData dispatchIndirect;
+
+				DispatchType() : dispatch()
+				{
+
+				}
+
+				~DispatchType()
+				{
+
+				}
+			} data;
+		};
+
 		ID3D11Device* device;
 
 		LockableUnorderedMap<SGGuid, DrawCall> drawCalls;
+		LockableUnorderedMap<SGGuid, DispatchCall> dispatchCalls;
 
 		DrawCall GetDrawCall(const SGGuid& guid);
 		DrawCall GetDrawCall(const SGGuid& guid, const SGGuid& groupGuid);
 		DrawCall GetDrawCall(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		DispatchCall GetDispatchCall(const SGGuid& guid);
+		DispatchCall GetDispatchCall(const SGGuid& guid, const SGGuid& groupGuid);
+		DispatchCall GetDispatchCall(const SGGuid& guid, const SGGraphicalEntityID& entity);
 	};
 }

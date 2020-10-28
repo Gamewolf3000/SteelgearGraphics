@@ -222,6 +222,9 @@ void SG::D3D11RenderEngine::HandlePipelineJobs(const std::vector<SGGraphicsJob>&
 			case PipelineJobType::RENDER:
 				HandleRenderJob(pipelineManager->GetRenderJob(job.second), jobs[i].entitiesToRender, context);
 				break;
+			case PipelineJobType::COMPUTE:
+				HandleComputeJob(pipelineManager->GetComputeJob(job.second), jobs[i].entitiesToRender, context);
+				break;
 			case PipelineJobType::CLEAR_RENDER_TARGET:
 				HandleClearRenderTargetJob(pipelineManager->GetClearRenderTargetJob(job.second), context);
 				break;
@@ -281,6 +284,20 @@ void SG::D3D11RenderEngine::SetShaders(const SGRenderJob & job, ID3D11DeviceCont
 	shaderManager->SetPixelShader(job.pixelShader.shader, context);
 }
 
+void SG::D3D11RenderEngine::HandleGlobalRenderJob(const SGRenderJob & job, ID3D11DeviceContext * context)
+{
+	SGGraphicalEntityID dummy; // Ugly workaround
+	SetVertexBuffers(job, dummy, context);
+	SetIndexBuffer(job, dummy, context);
+	SetConstantBuffers(job, dummy, context);
+	SetShaderResourceViews(job, dummy, context);
+	SetSamplerStates(job, dummy, context);
+	SetViewports(job, dummy, context);
+	SetStates(job, dummy, context);
+	SetOMViews(job, dummy, context);
+	ExecuteDrawCall(job, dummy, context);
+}
+
 void SG::D3D11RenderEngine::HandleGroupRenderJob(const SGRenderJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
 {
 	entityMutex.lock();
@@ -338,6 +355,48 @@ void SG::D3D11RenderEngine::HandleEntityRenderJob(const SGRenderJob & job, const
 		SetOMViews(job, entity, context);
 		ExecuteDrawCall(job, entity, context);
 	}
+}
+
+void SG::D3D11RenderEngine::HandleComputeJob(const SGComputeJob & job, const std::vector<SGGraphicalEntityID>& entities, ID3D11DeviceContext * context)
+{
+	(void)entities;
+	shaderManager->SetComputeShader(job.shader, context);
+
+	if (job.association == Association::GLOBAL)
+	{
+		HandleGlobalComputeJob(job, context);
+	}
+	else if (job.association == Association::GROUP)
+	{
+		//HandleGroupComputeJob(job, entities, context);
+	}
+	else if (job.association == Association::ENTITY)
+	{
+		//HandleEntityComputeJob(job, entities, context);
+	}
+}
+
+void SG::D3D11RenderEngine::HandleGlobalComputeJob(const SGComputeJob & job, ID3D11DeviceContext * context)
+{
+	SGGraphicalEntityID dummy; // Ugly workaround
+	SetConstantBuffersForShader(job.constantBuffers, dummy, context, &ID3D11DeviceContext::CSSetConstantBuffers);
+	SetShaderResourceViewsForShader(job.shaderResourceViews, dummy, context, &ID3D11DeviceContext::CSSetShaderResources);
+	SetSamplerStatesForShader(job.samplers, dummy, context, &ID3D11DeviceContext::CSSetSamplers);
+	
+	const int maximumUAVs = 8;
+	ID3D11UnorderedAccessView* uavs[maximumUAVs] = {};
+	UINT nrOfUAVS = 0;
+
+	for (auto& uav : job.unorderedAccessViews)
+		uavs[nrOfUAVS++] = GetUAV(uav, dummy);
+
+	context->CSSetUnorderedAccessViews(0, nrOfUAVS, uavs, nullptr);
+
+	SG::D3D11DrawCallHandler::DispatchCall dispatchCall = GetDispatchCall(job.dispatchCall, dummy);
+	if (dispatchCall.indirect)
+		context->DispatchIndirect(bufferHandler->GetBuffer(dispatchCall.data.dispatchIndirect.bufferForArgs, context), dispatchCall.data.dispatchIndirect.alignedByteOffsetForArgs);
+	else
+		context->Dispatch(dispatchCall.data.dispatch.threadGroupCountX, dispatchCall.data.dispatch.threadGroupCountY, dispatchCall.data.dispatch.threadGroupCountZ);
 }
 
 void SG::D3D11RenderEngine::SetConstantBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
@@ -419,10 +478,11 @@ void SG::D3D11RenderEngine::SetOMViews(const SGRenderJob & job, const SGGraphica
 	for (auto& rtv : job.rtvs)
 		rtvs[nrOfRTVs++] = GetRTV(rtv, entity);
 
-	if(job.dsv.resourceGuid != SGGuid())
+	if(job.dsv.component.resourceGuid != SGGuid())
 		dsv = GetDSV(job.dsv, entity);
 
-	//UAVs
+	for (auto& uav : job.uavs)
+		uavs[nrOfUAVS++] = GetUAV(uav, entity);
 
 	context->OMSetRenderTargetsAndUnorderedAccessViews(nrOfRTVs, rtvs, dsv, nrOfRTVs, nrOfUAVS, uavs, nullptr);
 }
@@ -512,7 +572,7 @@ void SG::D3D11RenderEngine::SetConstantBuffersForShader(const std::vector<Pipeli
 	(context->*func)(0, arrSize, bufferArr);
 }
 
-void SG::D3D11RenderEngine::SetShaderResourceViewsForShader(const std::vector<PipelineComponent>& srvs, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context, void(_stdcall ID3D11DeviceContext::* func)(UINT, UINT, ID3D11ShaderResourceView * const *))
+void SG::D3D11RenderEngine::SetShaderResourceViewsForShader(const std::vector<ResourceView>& srvs, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context, void(_stdcall ID3D11DeviceContext::* func)(UINT, UINT, ID3D11ShaderResourceView * const *))
 {
 	const UINT arrSize = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
 	ID3D11ShaderResourceView* srvArr[arrSize] = {};
@@ -684,14 +744,14 @@ UINT SG::D3D11RenderEngine::GetStrideFromVB(const PipelineComponent & component,
 	return toReturn;
 }
 
-ID3D11ShaderResourceView * SG::D3D11RenderEngine::GetSRV(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+ID3D11ShaderResourceView * SG::D3D11RenderEngine::GetSRV(const ResourceView & view, const SGGraphicalEntityID & entity)
 {
 	ID3D11ShaderResourceView* toReturn = nullptr;
-	switch (component.source)
+	switch (view.component.source)
 	{
 	case Association::GLOBAL:
 	{
-		toReturn = textureHandler->GetSRV(component.resourceGuid);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetSRV(view.component.resourceGuid) : bufferHandler->GetSRV(view.component.resourceGuid);
 	}
 	break;
 	case Association::GROUP:
@@ -699,13 +759,13 @@ ID3D11ShaderResourceView * SG::D3D11RenderEngine::GetSRV(const PipelineComponent
 		entityMutex.lock();
 		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
 		entityMutex.unlock();
-		toReturn = textureHandler->GetSRV(component.resourceGuid, groupGuid);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetSRV(view.component.resourceGuid, groupGuid) : bufferHandler->GetSRV(view.component.resourceGuid, groupGuid);
 	}
 	break;
 	case Association::ENTITY:
 	{
 		entityMutex.lock();
-		toReturn = textureHandler->GetSRV(component.resourceGuid, entity);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetSRV(view.component.resourceGuid, entity) : bufferHandler->GetSRV(view.component.resourceGuid, entity);
 		entityMutex.unlock();
 	}
 	break;
@@ -714,14 +774,14 @@ ID3D11ShaderResourceView * SG::D3D11RenderEngine::GetSRV(const PipelineComponent
 	return toReturn;
 }
 
-ID3D11RenderTargetView* SG::D3D11RenderEngine::GetRTV(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+ID3D11RenderTargetView* SG::D3D11RenderEngine::GetRTV(const ResourceView & view, const SGGraphicalEntityID & entity)
 {
 	ID3D11RenderTargetView* toReturn = nullptr;
-	switch (component.source)
+	switch (view.component.source)
 	{
 	case Association::GLOBAL:
 	{
-		toReturn = textureHandler->GetRTV(component.resourceGuid);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetRTV(view.component.resourceGuid) : nullptr;
 	}
 	break;
 	case Association::GROUP:
@@ -729,13 +789,13 @@ ID3D11RenderTargetView* SG::D3D11RenderEngine::GetRTV(const PipelineComponent & 
 		entityMutex.lock();
 		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
 		entityMutex.unlock();
-		toReturn = textureHandler->GetRTV(component.resourceGuid, groupGuid);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetRTV(view.component.resourceGuid, groupGuid) : nullptr;
 	}
 	break;
 	case Association::ENTITY:
 	{
 		entityMutex.lock();
-		toReturn = textureHandler->GetRTV(component.resourceGuid, entity);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetRTV(view.component.resourceGuid, entity) : nullptr;
 		entityMutex.unlock();
 	}
 	break;
@@ -744,14 +804,14 @@ ID3D11RenderTargetView* SG::D3D11RenderEngine::GetRTV(const PipelineComponent & 
 	return toReturn;
 }
 
-ID3D11DepthStencilView * SG::D3D11RenderEngine::GetDSV(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+ID3D11DepthStencilView * SG::D3D11RenderEngine::GetDSV(const ResourceView & view, const SGGraphicalEntityID & entity)
 {
 	ID3D11DepthStencilView* toReturn = nullptr;
-	switch (component.source)
+	switch (view.component.source)
 	{
 	case Association::GLOBAL:
 	{
-		toReturn = textureHandler->GetDSV(component.resourceGuid);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetDSV(view.component.resourceGuid) : nullptr;
 	}
 	break;
 	case Association::GROUP:
@@ -759,13 +819,43 @@ ID3D11DepthStencilView * SG::D3D11RenderEngine::GetDSV(const PipelineComponent &
 		entityMutex.lock();
 		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
 		entityMutex.unlock();
-		toReturn = textureHandler->GetDSV(component.resourceGuid, groupGuid);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetDSV(view.component.resourceGuid, groupGuid) : nullptr;
 	}
 	break;
 	case Association::ENTITY:
 	{
 		entityMutex.lock();
-		toReturn = textureHandler->GetDSV(component.resourceGuid, entity);
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetDSV(view.component.resourceGuid, entity) : nullptr;
+		entityMutex.unlock();
+	}
+	break;
+	}
+
+	return toReturn;
+}
+
+ID3D11UnorderedAccessView * SG::D3D11RenderEngine::GetUAV(const ResourceView & view, const SGGraphicalEntityID & entity)
+{
+	ID3D11UnorderedAccessView* toReturn = nullptr;
+	switch (view.component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetUAV(view.component.resourceGuid) : bufferHandler->GetUAV(view.component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetUAV(view.component.resourceGuid, groupGuid) : bufferHandler->GetUAV(view.component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = view.type == ResourceView::ResourceType::TEXTURE ? textureHandler->GetUAV(view.component.resourceGuid, entity) : bufferHandler->GetUAV(view.component.resourceGuid, entity);
 		entityMutex.unlock();
 	}
 	break;
@@ -835,7 +925,40 @@ SG::D3D11DrawCallHandler::DrawCall SG::D3D11RenderEngine::GetDrawCall(const Pipe
 	}
 	break;
 	default:
-		throw std::runtime_error("Error, this error should never happen, because it implies that an association that does not exist has been used for a drawcall");
+		throw std::runtime_error("Error, this error should never happen, because it implies that an association that does not exist has been used for a draw call");
+	}
+
+	return toReturn;
+}
+
+SG::D3D11DrawCallHandler::DispatchCall SG::D3D11RenderEngine::GetDispatchCall(const PipelineComponent & component, const SGGraphicalEntityID & entity)
+{
+	SG::D3D11DrawCallHandler::DispatchCall toReturn;
+
+	switch (component.source)
+	{
+	case Association::GLOBAL:
+	{
+		toReturn = drawCallHandler->GetDispatchCall(component.resourceGuid);
+	}
+	break;
+	case Association::GROUP:
+	{
+		entityMutex.lock();
+		SGGuid& groupGuid = graphicalEntities[entity].groupGuid;
+		entityMutex.unlock();
+		toReturn = drawCallHandler->GetDispatchCall(component.resourceGuid, groupGuid);
+	}
+	break;
+	case Association::ENTITY:
+	{
+		entityMutex.lock();
+		toReturn = drawCallHandler->GetDispatchCall(component.resourceGuid, entity);
+		entityMutex.unlock();
+	}
+	break;
+	default:
+		throw std::runtime_error("Error, this error should never happen, because it implies that an association that does not exist has been used for a dispatch call");
 	}
 
 	return toReturn;

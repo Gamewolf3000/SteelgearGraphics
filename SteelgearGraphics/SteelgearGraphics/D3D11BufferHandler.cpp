@@ -108,6 +108,42 @@ SG::SGResult SG::D3D11BufferHandler::BindStrideToGroup(const SGGuid & group, con
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11BufferHandler::BindViewToEntity(const SGGraphicalEntityID & entity, const SGGuid & viewGuid, const SGGuid & bindGuid)
+{
+	this->UpdateEntity(entity, viewGuid, bindGuid);
+
+	if constexpr (DEBUG_VERSION)
+	{
+		views.lock();
+		if (views.find(viewGuid) == views.end())
+		{
+			views.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		views.unlock();
+	}
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11BufferHandler::BindViewToGroup(const SGGuid & group, const SGGuid & viewGuid, const SGGuid & bindGuid)
+{
+	UpdateGroup(group, viewGuid, bindGuid);
+
+	if constexpr (DEBUG_VERSION)
+	{
+		views.lock();
+		if (views.find(viewGuid) == views.end())
+		{
+			views.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		views.unlock();
+	}
+
+	return SGResult::OK;
+}
+
 void SG::D3D11BufferHandler::UpdateBuffer(const SGGuid & guid, const UpdateStrategy& updateStrategy, void * data, UINT subresource)
 {
 	frameBufferMutex.lock();
@@ -228,6 +264,228 @@ ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11Devi
 		UpdateBufferGPU(bData, context);
 
 	return bData.buffer;
+}
+
+ID3D11ShaderResourceView * SG::D3D11BufferHandler::GetSRV(const SGGuid & guid)
+{
+	views.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (views.find(guid) == views.end())
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not exist");
+		}
+
+		if (views[guid].type != ResourceViewType::SRV)
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not match an srv");
+		}
+	}
+
+	auto toReturn = views[guid].view.srv;
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11ShaderResourceView * SG::D3D11BufferHandler::GetSRV(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	views.lock();
+	groupData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (groupData.find(groupGuid) == groupData.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, group does not exist");
+		}
+
+		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, group does not have the guid");
+		}
+
+		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not exist");
+		}
+
+		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::SRV)
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not match an srv");
+		}
+	}
+
+	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.srv;
+	groupData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11ShaderResourceView * SG::D3D11BufferHandler::GetSRV(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	views.lock();
+	entityData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (entityData.find(entity) == entityData.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, entity does not exist");
+		}
+
+		if (entityData[entity].find(guid) == entityData[entity].end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, entity does not have the guid");
+		}
+
+		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not exist");
+		}
+
+		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::SRV)
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching srv, guid does not match an srv");
+		}
+	}
+
+	auto toReturn = views[entityData[entity][guid].GetActive()].view.srv;
+	entityData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11UnorderedAccessView * SG::D3D11BufferHandler::GetUAV(const SGGuid & guid)
+{
+	views.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (views.find(guid) == views.end())
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not exist");
+		}
+
+		if (views[guid].type != ResourceViewType::UAV)
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not match an uav");
+		}
+	}
+
+	auto toReturn = views[guid].view.uav;
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11UnorderedAccessView * SG::D3D11BufferHandler::GetUAV(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	views.lock();
+	groupData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (groupData.find(groupGuid) == groupData.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, group does not exist");
+		}
+
+		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, group does not have the guid");
+		}
+
+		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not exist");
+		}
+
+		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::UAV)
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not match an uav");
+		}
+	}
+
+	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.uav;
+	groupData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11UnorderedAccessView * SG::D3D11BufferHandler::GetUAV(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	views.lock();
+	entityData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (entityData.find(entity) == entityData.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, entity does not exist");
+		}
+
+		if (entityData[entity].find(guid) == entityData[entity].end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, entity does not have the guid");
+		}
+
+		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not exist");
+		}
+
+		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::UAV)
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not match an uav");
+		}
+	}
+
+	auto toReturn = views[entityData[entity][guid].GetActive()].view.uav;
+	entityData.unlock();
+	views.unlock();
+
+	return toReturn;
 }
 
 UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid)

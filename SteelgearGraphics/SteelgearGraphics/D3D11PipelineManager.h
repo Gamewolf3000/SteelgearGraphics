@@ -9,11 +9,22 @@
 
 namespace SG
 {
+	struct ResourceView
+	{
+		enum class ResourceType
+		{
+			BUFFER,
+			TEXTURE
+		} type;
+
+		PipelineComponent component;
+	};
+
 	struct RenderShader
 	{
 		SGGuid shader;
 		std::vector<PipelineComponent> constantBuffers;
-		std::vector<PipelineComponent> shaderResourceViews;
+		std::vector<ResourceView> shaderResourceViews;
 		std::vector<PipelineComponent> samplers;
 	};
 
@@ -58,9 +69,10 @@ namespace SG
 		RenderShader domainShader;
 		RenderShader geometryShader;
 		RenderShader pixelShader;
-		std::vector<PipelineComponent> rtvs;
+		std::vector<ResourceView> rtvs;
+		std::vector<ResourceView> uavs;
 		std::vector<PipelineComponent> viewports;
-		PipelineComponent dsv;
+		ResourceView dsv;
 		PipelineComponent rasterizerState;
 		PipelineComponent blendState;
 		PipelineComponent drawCall;
@@ -70,10 +82,11 @@ namespace SG
 	{
 		Association association;
 		SGGuid shader;
+		PipelineComponent dispatchCall;
 		std::vector<PipelineComponent> constantBuffers;
-		std::vector<PipelineComponent> shaderResourceViews;
+		std::vector<ResourceView> shaderResourceViews;
+		std::vector<ResourceView> unorderedAccessViews;
 		std::vector<PipelineComponent> samplers;
-		std::vector<PipelineComponent> uavs;
 	};
 
 	struct SGClearRenderTargetJob

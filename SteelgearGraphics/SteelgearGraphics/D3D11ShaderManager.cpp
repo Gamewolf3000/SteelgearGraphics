@@ -97,6 +97,24 @@ SG::SGResult SG::D3D11ShaderManager::CreatePixelShader(const SGGuid & guid, cons
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11ShaderManager::CreateComputeShader(const SGGuid & guid, const void * shaderByteCode, SIZE_T byteCodeLength)
+{
+	ID3D11ComputeShader* cs;
+
+	if (FAILED(device->CreateComputeShader(shaderByteCode, byteCodeLength, nullptr, &cs)))
+		return SGResult::FAIL;
+
+	D3D11ShaderData toStore;
+	toStore.type = ShaderType::COMPUTE_SHADER;
+	toStore.shader.compute = cs;
+
+	this->shaders.lock();
+	this->shaders[guid] = toStore;
+	this->shaders.unlock();
+
+	return SGResult::OK;
+}
+
 void SG::D3D11ShaderManager::SetInputLayout(const SGGuid & guid, ID3D11DeviceContext * context)
 {
 	inputLayouts.lock();
@@ -132,6 +150,19 @@ void SG::D3D11ShaderManager::SetPixelShader(const SGGuid & guid, ID3D11DeviceCon
 			throw std::runtime_error("Error setting pixel shader, guid not found");
 
 	context->PSSetShader(shaders[guid].shader.pixel, nullptr, 0);
+
+	shaders.unlock();
+}
+
+void SG::D3D11ShaderManager::SetComputeShader(const SGGuid & guid, ID3D11DeviceContext * context)
+{
+	shaders.lock();
+
+	if constexpr (DEBUG_VERSION)
+		if (shaders.find(guid) == shaders.end())
+			throw std::runtime_error("Error setting compute shader, guid not found");
+
+	context->CSSetShader(shaders[guid].shader.compute, nullptr, 0);
 
 	shaders.unlock();
 }

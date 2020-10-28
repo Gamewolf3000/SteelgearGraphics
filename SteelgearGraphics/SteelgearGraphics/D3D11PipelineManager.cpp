@@ -19,6 +19,15 @@ SG::SGResult SG::D3D11PipelineManager::CreateRenderJob(const SGGuid & guid, cons
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11PipelineManager::CreateComputeJob(const SGGuid & guid, const SGComputeJob & job)
+{
+	computeJobs.lock();
+	computeJobs[guid] = job;
+	computeJobs.unlock();
+
+	return SGResult::OK;
+}
+
 SG::SGResult SG::D3D11PipelineManager::CreateClearRenderTargetJob(const SGGuid & guid, const SGClearRenderTargetJob & job)
 {
 	clearRenderTargetJobs.lock();
@@ -59,7 +68,7 @@ SG::SGComputeJob SG::D3D11PipelineManager::GetComputeJob(const SGGuid & guid)
 	if constexpr (DEBUG_VERSION)
 	{
 		if (computeJobs.find(guid) == computeJobs.end())
-			throw std::runtime_error("Error fetching render job, guid does not exist");
+			throw std::runtime_error("Error fetching compute job, guid does not exist");
 	}
 
 	return computeJobs[guid];

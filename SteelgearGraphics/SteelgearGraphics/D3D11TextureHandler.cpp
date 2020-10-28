@@ -175,6 +175,82 @@ SG::SGResult SG::D3D11TextureHandler::CreateSRV(const SGGuid & guid, const SGGui
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11TextureHandler::CreateUAV(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice, UINT wSize)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+	{
+		textures.unlock();
+		return SGResult::GUID_MISSING;
+	}
+
+	textures.unlock();
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = GetUAVDimension(storedData->second.type);
+
+	switch (storedData->second.type)
+	{
+	case TextureType::TEXTURE_1D:
+		desc.Texture1D.MipSlice = mipSlice;
+		break;
+	case TextureType::TEXTURE_2D:
+		desc.Texture2D.MipSlice = mipSlice;
+		break;
+	case TextureType::TEXTURE_3D:
+		desc.Texture3D.MipSlice = mipSlice;
+		desc.Texture3D.FirstWSlice = firstWSlice;
+		desc.Texture3D.WSize = wSize;
+		break;
+	default:
+		throw std::runtime_error("CreateUAV called refering to texture of incorrect type");
+		break;
+	}
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::UAV;
+
+	if (FAILED(device->CreateUnorderedAccessView(storedData->second.texture.texture2D, &desc, &toStore.view.uav)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11TextureHandler::CreateUAV(const SGGuid & guid, const SGGuid & textureGuid)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+	{
+		textures.unlock();
+		return SGResult::GUID_MISSING;
+	}
+
+	textures.unlock();
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::UAV;
+
+	if (FAILED(device->CreateUnorderedAccessView(storedData->second.texture.texture2D, nullptr, &toStore.view.uav)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
 SG::SGResult SG::D3D11TextureHandler::CreateRTV(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice, UINT wSize)
 {
 	textures.lock();
@@ -504,6 +580,117 @@ ID3D11ShaderResourceView * SG::D3D11TextureHandler::GetSRV(const SGGuid & guid, 
 	return toReturn;
 }
 
+ID3D11UnorderedAccessView * SG::D3D11TextureHandler::GetUAV(const SGGuid & guid)
+{
+	views.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (views.find(guid) == views.end())
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not exist");
+		}
+
+		if (views[guid].type != ResourceViewType::UAV)
+		{
+			views.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not match an uav");
+		}
+	}
+
+	auto toReturn = views[guid].view.uav;
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11UnorderedAccessView * SG::D3D11TextureHandler::GetUAV(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	views.lock();
+	groupData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (groupData.find(groupGuid) == groupData.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, group does not exist");
+		}
+
+		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, group does not have the guid");
+		}
+
+		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not exist");
+		}
+
+		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::UAV)
+		{
+			views.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not match an uav");
+		}
+	}
+
+	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.uav;
+	groupData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
+ID3D11UnorderedAccessView * SG::D3D11TextureHandler::GetUAV(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	views.lock();
+	entityData.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (entityData.find(entity) == entityData.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, entity does not exist");
+		}
+
+		if (entityData[entity].find(guid) == entityData[entity].end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, entity does not have the guid");
+		}
+
+		if (views.find(entityData[entity][guid].GetActive()) == views.end())
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not exist");
+		}
+
+		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::UAV)
+		{
+			views.unlock();
+			entityData.unlock();
+			throw std::runtime_error("Error fetching uav, guid does not match an uav");
+		}
+	}
+
+	auto toReturn = views[entityData[entity][guid].GetActive()].view.uav;
+	entityData.unlock();
+	views.unlock();
+
+	return toReturn;
+}
+
 ID3D11RenderTargetView * SG::D3D11TextureHandler::GetRTV(const SGGuid & guid)
 {
 	views.lock();
@@ -815,6 +1002,35 @@ D3D11_SRV_DIMENSION SG::D3D11TextureHandler::GetSRVDimension(TextureType type)
 		break;
 	default:
 		throw std::runtime_error("Trying to create an SRV with a texture of incompatible type");
+		break;
+	}
+
+	return toReturn;
+}
+
+D3D11_UAV_DIMENSION SG::D3D11TextureHandler::GetUAVDimension(TextureType type)
+{
+	D3D11_UAV_DIMENSION toReturn = D3D11_UAV_DIMENSION_UNKNOWN;
+
+	switch (type)
+	{
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_1D:
+		toReturn = D3D11_UAV_DIMENSION_TEXTURE1D;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_ARRAY_1D:
+		toReturn = D3D11_UAV_DIMENSION_TEXTURE1DARRAY;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_2D:
+		toReturn = D3D11_UAV_DIMENSION_TEXTURE2D;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_ARRAY_2D:
+		toReturn = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+		break;
+	case SG::D3D11TextureHandler::TextureType::TEXTURE_3D:
+		toReturn = D3D11_UAV_DIMENSION_TEXTURE3D;
+		break;
+	default:
+		throw std::runtime_error("Trying to create an UAV with a texture of incompatible type");
 		break;
 	}
 

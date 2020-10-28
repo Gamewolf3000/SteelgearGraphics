@@ -71,6 +71,35 @@ SG::SGResult SG::D3D11DrawCallHandler::CreateDrawIndexedInstancedCall(const SGGu
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11DrawCallHandler::CreateDispatchCall(const SGGuid & guid, UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ)
+{
+	DispatchCall toStore;
+	toStore.indirect = false;
+	toStore.data.dispatch.threadGroupCountX = threadGroupCountX;
+	toStore.data.dispatch.threadGroupCountY = threadGroupCountY;
+	toStore.data.dispatch.threadGroupCountZ = threadGroupCountZ;
+
+	dispatchCalls.lock();
+	dispatchCalls[guid] = toStore;
+	dispatchCalls.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11DrawCallHandler::CreateDispatchIndirectCall(const SGGuid & guid, const SGGuid & bufferGuid, UINT alignedByteOffsetForArgs)
+{
+	DispatchCall toStore;
+	toStore.indirect = true;
+	toStore.data.dispatchIndirect.bufferForArgs = bufferGuid;
+	toStore.data.dispatchIndirect.alignedByteOffsetForArgs = alignedByteOffsetForArgs;
+
+	dispatchCalls.lock();
+	dispatchCalls[guid] = toStore;
+	dispatchCalls.unlock();
+
+	return SGResult::OK;
+}
+
 SG::SGResult SG::D3D11DrawCallHandler::BindDrawCallToEntity(const SGGraphicalEntityID & entity, const SGGuid & callGuid, const SGGuid & bindGuid)
 {
 	this->UpdateEntity(entity, callGuid, bindGuid);
@@ -102,6 +131,42 @@ SG::SGResult SG::D3D11DrawCallHandler::BindDrawCallToGroup(const SGGuid & group,
 			return SGResult::GUID_MISSING;
 		}
 		drawCalls.unlock();
+	}
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11DrawCallHandler::BindDispatchCallToEntity(const SGGraphicalEntityID & entity, const SGGuid & callGuid, const SGGuid & bindGuid)
+{
+	this->UpdateEntity(entity, callGuid, bindGuid);
+
+	if constexpr (DEBUG_VERSION)
+	{
+		dispatchCalls.lock();
+		if (dispatchCalls.find(callGuid) == dispatchCalls.end())
+		{
+			dispatchCalls.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		dispatchCalls.unlock();
+	}
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11DrawCallHandler::BindDispatchCallToGroup(const SGGuid & group, const SGGuid & callGuid, const SGGuid & bindGuid)
+{
+	UpdateGroup(group, callGuid, bindGuid);
+
+	if constexpr (DEBUG_VERSION)
+	{
+		dispatchCalls.lock();
+		if (dispatchCalls.find(callGuid) == dispatchCalls.end())
+		{
+			dispatchCalls.unlock();
+			return SGResult::GUID_MISSING;
+		}
+		dispatchCalls.unlock();
 	}
 
 	return SGResult::OK;
@@ -163,6 +228,66 @@ SG::D3D11DrawCallHandler::DrawCall SG::D3D11DrawCallHandler::GetDrawCall(const S
 
 	DrawCall& toReturn = drawCalls[entityData[entity][guid].GetActive()];
 	drawCalls.unlock();
+	entityData.unlock();
+	return toReturn;
+}
+
+SG::D3D11DrawCallHandler::DispatchCall SG::D3D11DrawCallHandler::GetDispatchCall(const SGGuid & guid)
+{
+	dispatchCalls.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (dispatchCalls.find(guid) == dispatchCalls.end())
+		{
+			dispatchCalls.unlock();
+			throw std::runtime_error("Error, missing guid when fetching dispatch call");
+		}
+	}
+
+	DispatchCall& toReturn = dispatchCalls[guid];
+	dispatchCalls.unlock();
+	return toReturn;
+}
+
+SG::D3D11DrawCallHandler::DispatchCall SG::D3D11DrawCallHandler::GetDispatchCall(const SGGuid & guid, const SGGuid & groupGuid)
+{
+	groupData.lock();
+	dispatchCalls.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (dispatchCalls.find(groupData[groupGuid][guid].GetActive()) == dispatchCalls.end())
+		{
+			dispatchCalls.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error, missing guid when fetching disptach call");
+		}
+	}
+
+	DispatchCall& toReturn = dispatchCalls[groupData[groupGuid][guid].GetActive()];
+	dispatchCalls.unlock();
+	groupData.unlock();
+	return toReturn;
+}
+
+SG::D3D11DrawCallHandler::DispatchCall SG::D3D11DrawCallHandler::GetDispatchCall(const SGGuid & guid, const SGGraphicalEntityID & entity)
+{
+	entityData.lock();
+	dispatchCalls.lock();
+
+	if constexpr (DEBUG_VERSION)
+	{
+		if (dispatchCalls.find(entityData[entity][guid].GetActive()) == dispatchCalls.end())
+		{
+			dispatchCalls.unlock();
+			groupData.unlock();
+			throw std::runtime_error("Error, missing guid when fetching dispatch call");
+		}
+	}
+
+	DispatchCall& toReturn = dispatchCalls[entityData[entity][guid].GetActive()];
+	dispatchCalls.unlock();
 	entityData.unlock();
 	return toReturn;
 }

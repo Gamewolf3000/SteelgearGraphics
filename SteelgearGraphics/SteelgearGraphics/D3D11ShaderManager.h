@@ -36,6 +36,7 @@ namespace SG
 		SGResult CreateDomainShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
 		SGResult CreateGeometryShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
 		SGResult CreatePixelShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
+		SGResult CreateComputeShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength);
 
 	private:
 
@@ -52,7 +53,8 @@ namespace SG
 			HULL_SHADER,
 			DOMAIN_SHADER,
 			GEOMETRY_SHADER,
-			PIXEL_SHADER
+			PIXEL_SHADER,
+			COMPUTE_SHADER
 		};
 
 		struct D3D11ShaderData
@@ -65,6 +67,7 @@ namespace SG
 				ID3D11DomainShader* domain;
 				ID3D11GeometryShader* geometry;
 				ID3D11PixelShader* pixel;
+				ID3D11ComputeShader* compute;
 			}shader;
 		};
 
@@ -76,5 +79,7 @@ namespace SG
 		void SetInputLayout(const SGGuid& guid, ID3D11DeviceContext* context);
 		void SetVertexShader(const SGGuid& guid, ID3D11DeviceContext* context);
 		void SetPixelShader(const SGGuid& guid, ID3D11DeviceContext* context);
+		void SetComputeShader(const SGGuid& guid, ID3D11DeviceContext* context);
+
 	};
 }
