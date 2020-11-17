@@ -26,6 +26,9 @@ SG::D3D11ShaderManager::~D3D11ShaderManager()
 		case ShaderType::PIXEL_SHADER:
 			ReleaseCOM(shader.second.shader.pixel);
 			break;
+		case ShaderType::COMPUTE_SHADER:
+			ReleaseCOM(shader.second.shader.compute);
+			break;
 		}
 	}
 

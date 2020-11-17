@@ -31,6 +31,7 @@ namespace SG
 
 	struct SGBackBufferSettings
 	{
+		DXGI_USAGE usage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		int nrOfBackBuffers = 2;
 		int width = 1280;
 		int height = 720;

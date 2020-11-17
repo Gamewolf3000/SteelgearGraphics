@@ -9,6 +9,12 @@
 
 namespace SG
 {
+	struct ConstantBuffer
+	{
+		bool clearAtEnd = false;
+		PipelineComponent component;
+	};
+
 	struct ResourceView
 	{
 		enum class ResourceType
@@ -17,19 +23,21 @@ namespace SG
 			TEXTURE
 		} type;
 
+		bool clearAtEnd = false;
 		PipelineComponent component;
 	};
 
 	struct RenderShader
 	{
 		SGGuid shader;
-		std::vector<PipelineComponent> constantBuffers;
+		std::vector<ConstantBuffer> constantBuffers;
 		std::vector<ResourceView> shaderResourceViews;
 		std::vector<PipelineComponent> samplers;
 	};
 
 	struct SGVertexBuffer
 	{
+		bool clearAtEnd = false;
 		PipelineComponent buffer;
 		PipelineComponent stride;
 		PipelineComponent offset;
@@ -43,6 +51,7 @@ namespace SG
 
 	struct SGIndexBuffer
 	{
+		bool clearAtEnd = false;
 		PipelineComponent buffer;
 		PipelineComponent offset;
 		IndexBufferFormat format = IndexBufferFormat::IB_32_BIT;
@@ -83,7 +92,7 @@ namespace SG
 		Association association;
 		SGGuid shader;
 		PipelineComponent dispatchCall;
-		std::vector<PipelineComponent> constantBuffers;
+		std::vector<ConstantBuffer> constantBuffers;
 		std::vector<ResourceView> shaderResourceViews;
 		std::vector<ResourceView> unorderedAccessViews;
 		std::vector<PipelineComponent> samplers;

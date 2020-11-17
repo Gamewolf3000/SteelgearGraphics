@@ -32,12 +32,12 @@ namespace SG
 		/**
 			bufferGuid is the BufferData to create a SRV for
 		*/
-		SGResult CreateSRV(const SGGuid& guid, const SGGuid& bufferGuid, UINT firstElement, UINT numberOfElements);
+		SGResult CreateSRV(const SGGuid& guid, const SGGuid& bufferGuid, DXGI_FORMAT format, UINT elementOffset, UINT elementWidth);
 
 		/**
 			bufferGuid is the BufferData to create a UAV for
 		*/
-		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, UINT firstElement, UINT numberOfElements);
+		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, DXGI_FORMAT format, UINT firstElement, UINT numberOfElements, bool counter, bool append, bool raw);
 
 		SGResult BindBufferToEntity(const SGGraphicalEntityID& entity, const SGGuid& bufferGuid, const SGGuid& bindGuid);
 		SGResult BindBufferToGroup(const SGGuid& group, const SGGuid& bufferGuid, const SGGuid& bindGuid);
@@ -46,6 +46,9 @@ namespace SG
 		SGResult BindOffsetToGroup(const SGGuid& group, const SGGuid& offsetGuid, const SGGuid& bindGuid);
 		SGResult BindStrideToEntity(const SGGraphicalEntityID& entity, const SGGuid& strideGuid, const SGGuid& bindGuid);
 		SGResult BindStrideToGroup(const SGGuid& group, const SGGuid& strideGuid, const SGGuid& bindGuid);
+
+		SGResult BindViewToEntity(const SGGraphicalEntityID& entity, const SGGuid& viewGuid, const SGGuid& bindGuid);
+		SGResult BindViewToGroup(const SGGuid& group, const SGGuid& viewGuid, const SGGuid& bindGuid);
 
 		void UpdateBuffer(const SGGuid& guid, const UpdateStrategy& updateStrategy, void* data, UINT subresource = 0);
 
@@ -103,13 +106,19 @@ namespace SG
 		void SwapUpdateBuffer() override;
 		void SwapToWorkWithBuffer() override;
 
-		//void SetConstantBuffers(const std::vector<PipelineComponent>& vs, const std::vector<PipelineComponent>& hs, const std::vector<PipelineComponent>& ds, const std::vector<PipelineComponent>& gs, const std::vector<PipelineComponent>& ps, ID3D11DeviceContext* context, const SGGuid& groupGuid = SGGuid(), const SGGraphicalEntityID& entity = SGGraphicalEntityID());
-		//void FillBufferArray(const std::vector<PipelineComponent>& resources, ID3D11Buffer ** bufferArr, unsigned int arrSize, ID3D11DeviceContext* context, const SGGuid& groupGuid, const SGGraphicalEntityID& entity);
 		void UpdateBufferGPU(D3D11BufferData& toUpdate, ID3D11DeviceContext* context);
 
 		ID3D11Buffer* GetBuffer(const SGGuid& guid, ID3D11DeviceContext* context);
 		ID3D11Buffer* GetBuffer(const SGGuid& guid, ID3D11DeviceContext* context, const SGGuid& groupGuid);
 		ID3D11Buffer* GetBuffer(const SGGuid& guid, ID3D11DeviceContext* context, const SGGraphicalEntityID& entity);
+
+		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid);
+		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid, const SGGraphicalEntityID& entity);
+
+		ID3D11UnorderedAccessView* GetUAV(const SGGuid& guid);
+		ID3D11UnorderedAccessView* GetUAV(const SGGuid& guid, const SGGuid& groupGuid);
+		ID3D11UnorderedAccessView* GetUAV(const SGGuid& guid, const SGGraphicalEntityID& entity);
 
 		UINT GetOffset(const SGGuid& guid);
 		UINT GetOffset(const SGGuid& guid, const SGGuid& groupGuid);

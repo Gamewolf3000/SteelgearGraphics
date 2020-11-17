@@ -114,7 +114,7 @@ void SG::D3D11RenderEngine::CreateSwapChain(const SGRenderSettings & settings)
 	DXGI_SWAP_CHAIN_DESC swapchainDesc;
 	swapchainDesc.BufferDesc = bufferDesc;
 	swapchainDesc.SampleDesc = sampleDesc;
-	swapchainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapchainDesc.BufferUsage = settings.backBufferSettings.usage;
 	swapchainDesc.BufferCount = settings.backBufferSettings.nrOfBackBuffers;
 	swapchainDesc.OutputWindow = settings.windowHandle;
 	swapchainDesc.Windowed = settings.backBufferSettings.windowedMode;
@@ -252,6 +252,8 @@ void SG::D3D11RenderEngine::HandleRenderJob(const SGRenderJob & job, const std::
 	{
 		HandleEntityRenderJob(job, entities, context);
 	}
+
+	ClearNecessaryResources(job, context);
 }
 
 D3D11_PRIMITIVE_TOPOLOGY SG::D3D11RenderEngine::TranslateTopology(const SGTopology & topology)
@@ -399,6 +401,164 @@ void SG::D3D11RenderEngine::HandleGlobalComputeJob(const SGComputeJob & job, ID3
 		context->Dispatch(dispatchCall.data.dispatch.threadGroupCountX, dispatchCall.data.dispatch.threadGroupCountY, dispatchCall.data.dispatch.threadGroupCountZ);
 }
 
+void SG::D3D11RenderEngine::ClearNecessaryResources(const SGRenderJob& job, ID3D11DeviceContext* context)
+{
+	ClearVertexBuffers(job.vertexBuffers, context);
+
+	if (job.indexBuffer.clearAtEnd)
+	{
+		DXGI_FORMAT format = job.indexBuffer.format == IndexBufferFormat::IB_32_BIT ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+		context->IASetIndexBuffer(nullptr, format, 0);
+	}
+
+	ClearConstantBuffers(job, context);
+	ClearShaderResourceViews(job, context);
+	ClearOMViews(job, context);
+}
+
+void SG::D3D11RenderEngine::ClearVertexBuffers(const std::vector<SGVertexBuffer>& vertexBuffers, ID3D11DeviceContext* context)
+{
+	const UINT arrSize = D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT;
+	ID3D11Buffer* bufferArr[arrSize] = {};
+	UINT strideArr[arrSize] = {};
+	UINT offsetArr[arrSize] = {};
+
+	for (unsigned int i = 0; i < vertexBuffers.size(); ++i)
+	{
+		if (vertexBuffers[i].clearAtEnd)
+		{
+			int startPos = i;
+			int nrToClear = 1;
+
+			while (vertexBuffers[i + nrToClear].clearAtEnd)
+			{
+				++nrToClear;
+			}
+
+			context->IASetVertexBuffers(startPos, nrToClear, bufferArr, strideArr, offsetArr);
+			i += nrToClear - 1;
+		}
+	}
+}
+
+void SG::D3D11RenderEngine::ClearConstantBuffers(const SGRenderJob& job, ID3D11DeviceContext* context)
+{
+	ClearConstantBuffersForShader(job.vertexShader.constantBuffers, context, &ID3D11DeviceContext::VSSetConstantBuffers);
+	ClearConstantBuffersForShader(job.hullShader.constantBuffers, context, &ID3D11DeviceContext::HSSetConstantBuffers);
+	ClearConstantBuffersForShader(job.domainShader.constantBuffers, context, &ID3D11DeviceContext::DSSetConstantBuffers);
+	ClearConstantBuffersForShader(job.geometryShader.constantBuffers, context, &ID3D11DeviceContext::GSSetConstantBuffers);
+	ClearConstantBuffersForShader(job.pixelShader.constantBuffers, context, &ID3D11DeviceContext::PSSetConstantBuffers);
+}
+
+void SG::D3D11RenderEngine::ClearConstantBuffersForShader(const std::vector<ConstantBuffer>& constantBuffers, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::* func)(UINT, UINT, ID3D11Buffer* const*))
+{
+	const UINT arrSize = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
+	ID3D11Buffer* bufferArr[arrSize] = {};
+
+	for (unsigned int i = 0; i < constantBuffers.size(); ++i)
+	{
+		if (constantBuffers[i].clearAtEnd)
+		{
+			int nrToClear = 1;
+
+			while (constantBuffers[i + nrToClear].clearAtEnd)
+			{
+				++nrToClear;
+			}
+
+			(context->*func)(i, nrToClear, bufferArr);
+			i += nrToClear - 1;
+		}
+	}
+}
+
+void SG::D3D11RenderEngine::ClearShaderResourceViews(const SGRenderJob& job, ID3D11DeviceContext* context)
+{
+	ClearShaderResourceViewsForShader(job.vertexShader.shaderResourceViews, context, &ID3D11DeviceContext::VSSetShaderResources);
+	ClearShaderResourceViewsForShader(job.hullShader.shaderResourceViews, context, &ID3D11DeviceContext::HSSetShaderResources);
+	ClearShaderResourceViewsForShader(job.domainShader.shaderResourceViews, context, &ID3D11DeviceContext::DSSetShaderResources);
+	ClearShaderResourceViewsForShader(job.geometryShader.shaderResourceViews, context, &ID3D11DeviceContext::GSSetShaderResources);
+	ClearShaderResourceViewsForShader(job.pixelShader.shaderResourceViews, context, &ID3D11DeviceContext::PSSetShaderResources);
+}
+
+void SG::D3D11RenderEngine::ClearShaderResourceViewsForShader(const std::vector<ResourceView>& srvs, ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::* func)(UINT, UINT, ID3D11ShaderResourceView* const*))
+{
+	const UINT arrSize = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
+	ID3D11ShaderResourceView* srvArr[arrSize] = {};
+
+	for (unsigned int i = 0; i < srvs.size(); ++i)
+	{
+		if (srvs[i].clearAtEnd)
+		{
+			int nrToClear = 1;
+
+			while (srvs[i + nrToClear].clearAtEnd)
+			{
+				++nrToClear;
+			}
+
+			(context->*func)(i, nrToClear, srvArr);
+			i += nrToClear - 1;
+		}
+	}
+}
+
+void SG::D3D11RenderEngine::ClearOMViews(const SGRenderJob& job, ID3D11DeviceContext* context)
+{
+	const int maximumRTVsAndUAVs = 8;
+	ID3D11RenderTargetView* rtvs[maximumRTVsAndUAVs] = {};
+	ID3D11UnorderedAccessView* uavs[maximumRTVsAndUAVs] = {};
+	ID3D11DepthStencilView* dsv = nullptr;
+	int rtvsToClear[maximumRTVsAndUAVs];
+	int nrOfRTVsToClear = 0;
+	int uavsToClear[maximumRTVsAndUAVs];
+	int nrOfUAVsToClear = 0;
+	UINT nrOfRTVs = static_cast<UINT>(job.rtvs.size());
+	UINT nrOfUAVs = static_cast<UINT>(job.uavs.size());
+
+	for (unsigned int i = 0; i < job.rtvs.size(); ++i)
+		if (job.rtvs[i].clearAtEnd)
+			rtvsToClear[nrOfRTVsToClear++] = i;
+
+	for (unsigned int i = 0; i < job.uavs.size(); ++i)
+		if (job.uavs[i].clearAtEnd)
+			uavsToClear[nrOfUAVsToClear++] = i;
+
+	if (job.dsv.clearAtEnd || nrOfRTVsToClear != 0 || nrOfUAVsToClear != 0)
+	{
+		context->OMGetRenderTargetsAndUnorderedAccessViews(nrOfRTVs, rtvs, job.dsv.clearAtEnd ? &dsv : nullptr, nrOfRTVs, nrOfUAVs, uavs);
+
+		for (int i = 0; i < nrOfRTVsToClear; ++i)
+		{
+			rtvs[rtvsToClear[i]]->Release();
+			rtvs[rtvsToClear[i]] = nullptr;
+		}
+
+		for (int i = 0; i < nrOfUAVsToClear; ++i)
+		{
+			uavs[uavsToClear[i]]->Release();
+			uavs[uavsToClear[i]] = nullptr;
+		}
+
+		if (job.dsv.clearAtEnd)
+		{
+			dsv->Release();
+			dsv = nullptr;
+		}
+
+		context->OMSetRenderTargetsAndUnorderedAccessViews(nrOfRTVs, rtvs, dsv, nrOfRTVs, nrOfUAVs, uavs, nullptr);
+
+		for (int i = 0; i < nrOfRTVsToClear; ++i)
+			if(rtvs[rtvsToClear[i]] != nullptr)
+				rtvs[rtvsToClear[i]]->Release();
+
+		for (int i = 0; i < nrOfUAVsToClear; ++i)
+			if(uavs[uavsToClear[i]] != nullptr)
+				uavs[uavsToClear[i]]->Release();
+			
+	}
+}
+
 void SG::D3D11RenderEngine::SetConstantBuffers(const SGRenderJob & job, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context)
 {
 	SetConstantBuffersForShader(job.vertexShader.constantBuffers, entity, context, &ID3D11DeviceContext::VSSetConstantBuffers);
@@ -515,7 +675,8 @@ void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGra
 		context->Draw(GetVertexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.draw.startVertexLocation);
 		break;
 	case SG::D3D11DrawCallHandler::DrawType::DRAW_INDEXED:
-		context->DrawIndexed(GetIndexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.drawIndexed.startIndexLocation, drawCall.data.drawIndexed.baseVertexLocation);
+		context->DrawIndexed(GetIndexCount(job, drawCall.data.draw.vertexCount, entity), drawCall.data.drawIndexed.startIndexLocation,
+			drawCall.data.drawIndexed.baseVertexLocation);
 		break;
 	case SG::D3D11DrawCallHandler::DrawType::DRAW_INSTANCED:
 		SG::D3D11DrawCallHandler::DrawInstancedData drawInstanced = drawCall.data.drawInstanced;
@@ -561,13 +722,13 @@ void SG::D3D11RenderEngine::ExecuteDrawCall(const SGRenderJob & job, const SGGra
 
 }
 
-void SG::D3D11RenderEngine::SetConstantBuffersForShader(const std::vector<PipelineComponent>& buffers, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer * const *))
+void SG::D3D11RenderEngine::SetConstantBuffersForShader(const std::vector<ConstantBuffer>& buffers, const SGGraphicalEntityID & entity, ID3D11DeviceContext * context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer * const *))
 {
 	const UINT arrSize = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
 	ID3D11Buffer* bufferArr[arrSize] = {};
 	UINT counter = 0;
 	for (auto& cBuffer : buffers)
-		bufferArr[counter++] = GetBuffer(cBuffer, entity, context);
+		bufferArr[counter++] = GetBuffer(cBuffer.component, entity, context);
 
 	(context->*func)(0, arrSize, bufferArr);
 }
