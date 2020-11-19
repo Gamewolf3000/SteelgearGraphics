@@ -29,7 +29,7 @@ namespace SG
 		std::vector<TextureBinding> textureBindings;
 		bool generateMips;
 		bool resourceClamp;
-		void* data;
+		std::vector<void*> data;
 		UINT bytesPerRow;
 		UINT rowsPerSlice;
 	};

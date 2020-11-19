@@ -49,8 +49,6 @@ SG::D3D11TextureHandler::~D3D11TextureHandler()
 
 SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const SGTextureData & generalSettings, UINT width, UINT height, UINT arraySize, const DXGI_SAMPLE_DESC & sampleDesc, bool texturecube)
 {
-	(void)texturecube; // FIX LATER
-
 	D3D11_TEXTURE2D_DESC desc;
 	desc.Width = width;
 	desc.Height = height;
@@ -65,14 +63,29 @@ SG::SGResult SG::D3D11TextureHandler::CreateTexture2D(const SGGuid & guid, const
 
 	ID3D11Texture2D* texture;
 
-	if (generalSettings.data)
+	if (generalSettings.data.size())
 	{
-		D3D11_SUBRESOURCE_DATA data;
-		data.pSysMem = generalSettings.data;
-		data.SysMemPitch = width * GetFormatElementSize(generalSettings.format);
-		data.SysMemSlicePitch = 0;
+		if (generalSettings.data.size() < arraySize * generalSettings.mipLevels)
+			return SG::SGResult::FAIL;
 
-		if (FAILED(device->CreateTexture2D(&desc, &data, &texture)))
+		// does not take into account the mip maps but the stack cannot store an infinite amount
+		D3D11_SUBRESOURCE_DATA data[D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION]; 
+		int formatSize = GetFormatElementSize(generalSettings.format);
+
+		for (unsigned int i = 0; i < arraySize; ++i)
+		{
+			int mipLevelDivision = 1;
+			
+			for (unsigned int j = 0; j < generalSettings.mipLevels; ++j)
+			{
+				data[i * generalSettings.mipLevels + j].pSysMem = generalSettings.data[i * generalSettings.mipLevels + j];
+				data[i * generalSettings.mipLevels + j].SysMemPitch = (width / mipLevelDivision) * formatSize;
+				data[i * generalSettings.mipLevels + j].SysMemSlicePitch = 0;
+				mipLevelDivision *= 2;
+			}
+		}
+
+		if (FAILED(device->CreateTexture2D(&desc, data, &texture)))
 			return SGResult::FAIL;
 	}
 	else

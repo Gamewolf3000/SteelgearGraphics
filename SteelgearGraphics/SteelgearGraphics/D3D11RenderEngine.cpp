@@ -376,6 +376,8 @@ void SG::D3D11RenderEngine::HandleComputeJob(const SGComputeJob & job, const std
 	{
 		//HandleEntityComputeJob(job, entities, context);
 	}
+
+	ClearNecessaryResources(job, context);
 }
 
 void SG::D3D11RenderEngine::HandleGlobalComputeJob(const SGComputeJob & job, ID3D11DeviceContext * context)
@@ -414,6 +416,12 @@ void SG::D3D11RenderEngine::ClearNecessaryResources(const SGRenderJob& job, ID3D
 	ClearConstantBuffers(job, context);
 	ClearShaderResourceViews(job, context);
 	ClearOMViews(job, context);
+}
+
+void SG::D3D11RenderEngine::ClearNecessaryResources(const SGComputeJob& job, ID3D11DeviceContext* context)
+{
+	ClearConstantBuffersForShader(job.constantBuffers, context, &ID3D11DeviceContext::CSSetConstantBuffers);
+	ClearShaderResourceViewsForShader(job.shaderResourceViews, context, &ID3D11DeviceContext::CSSetShaderResources);
 }
 
 void SG::D3D11RenderEngine::ClearVertexBuffers(const std::vector<SGVertexBuffer>& vertexBuffers, ID3D11DeviceContext* context)
