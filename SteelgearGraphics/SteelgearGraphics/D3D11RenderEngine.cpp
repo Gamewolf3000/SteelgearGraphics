@@ -438,7 +438,7 @@ void SG::D3D11RenderEngine::ClearVertexBuffers(const std::vector<SGVertexBuffer>
 			int startPos = i;
 			int nrToClear = 1;
 
-			while (vertexBuffers[i + nrToClear].clearAtEnd)
+			while (i + nrToClear < vertexBuffers.size() && vertexBuffers[i + nrToClear].clearAtEnd)
 			{
 				++nrToClear;
 			}
@@ -469,7 +469,7 @@ void SG::D3D11RenderEngine::ClearConstantBuffersForShader(const std::vector<Cons
 		{
 			int nrToClear = 1;
 
-			while (constantBuffers[i + nrToClear].clearAtEnd)
+			while (i + nrToClear < constantBuffers.size() && constantBuffers[i + nrToClear].clearAtEnd)
 			{
 				++nrToClear;
 			}
@@ -500,7 +500,7 @@ void SG::D3D11RenderEngine::ClearShaderResourceViewsForShader(const std::vector<
 		{
 			int nrToClear = 1;
 
-			while (srvs[i + nrToClear].clearAtEnd)
+			while (i + nrToClear < srvs.size() && srvs[i + nrToClear].clearAtEnd)
 			{
 				++nrToClear;
 			}
