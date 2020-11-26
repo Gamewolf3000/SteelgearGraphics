@@ -16,6 +16,50 @@
 
 namespace SG
 {
+	struct RenderShaderState
+	{
+		ID3D11Buffer* constantBuffers[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
+		ID3D11ShaderResourceView* shaderResourceViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
+		ID3D11SamplerState* samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT];
+	};
+
+	struct VertexBufferState
+	{
+		ID3D11Buffer* buffer;
+		UINT offset;
+		UINT stride;
+	};
+
+	struct IndexBufferState
+	{
+		ID3D11Buffer* buffer;
+		UINT offset;
+	};
+
+	struct RenderPipelineState
+	{
+		VertexBufferState vertexBuffers[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+		IndexBufferState indexBuffer;
+		RenderShaderState vertexShader;
+		RenderShaderState hullShader;
+		RenderShaderState domainShader;
+		RenderShaderState geometryShader;
+		RenderShaderState pixelShader;
+		ID3D11RenderTargetView* rtvs[8];
+		ID3D11UnorderedAccessView* uavs[8];
+		D3D11_VIEWPORT viewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+		ID3D11DepthStencilView* dsv;
+		ID3D11RasterizerState* rasterizerState;
+		ID3D11BlendState* blendState;
+	};
+
+	struct ComputePipelineState
+	{
+		ID3D11Buffer* constantBuffers[D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT];
+		ID3D11ShaderResourceView* shaderResourceViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT];
+		ID3D11UnorderedAccessView* unorderedAccessViews[8];
+		ID3D11SamplerState* samplers[D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT];
+	};
 
 	class D3D11RenderEngine : public SGRenderEngine
 	{
@@ -78,22 +122,33 @@ namespace SG
 
 		void ClearOMViews(const SGRenderJob& job, ID3D11DeviceContext* context);
 
-		void SetConstantBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetShaderResourceViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetSamplerStates(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetVertexBuffers(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetIndexBuffer(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetOMViews(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetViewports(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetStates(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetConstantBuffers(const SGRenderJob& job, RenderPipelineState& currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetShaderResourceViews(const SGRenderJob& job, RenderPipelineState& currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetSamplerStates(const SGRenderJob& job, RenderPipelineState& currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetVertexBuffers(const SGRenderJob& job, VertexBufferState currentState[],
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetIndexBuffer(const SGRenderJob& job, IndexBufferState& currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetOMViews(const SGRenderJob& job, RenderPipelineState& currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetViewports(const SGRenderJob& job, D3D11_VIEWPORT currentState[],
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
+		void SetStates(const SGRenderJob& job, RenderPipelineState& currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, unsigned int nrInGroup, ID3D11DeviceContext* context);
 		void ExecuteDrawCall(const SGRenderJob& job, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
-		void SetConstantBuffersForShader(const std::vector<ConstantBuffer>& buffers, const SGGraphicalEntityID& entity,
-			ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer*const*));
-		void SetShaderResourceViewsForShader(const std::vector<ResourceView>& srvs, const SGGraphicalEntityID& entity,
-			ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11ShaderResourceView *const*));
-		void SetSamplerStatesForShader(const std::vector<PipelineComponent>& samplers, const SGGraphicalEntityID& entity,
-			ID3D11DeviceContext* context, void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11SamplerState *const*));
+		void SetConstantBuffersForShader(const std::vector<ConstantBuffer>& buffers, ID3D11Buffer** currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context,
+			void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11Buffer*const*));
+		void SetShaderResourceViewsForShader(const std::vector<ResourceView>& srvs, ID3D11ShaderResourceView** currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context,
+			void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11ShaderResourceView *const*));
+		void SetSamplerStatesForShader(const std::vector<PipelineComponent>& samplers, ID3D11SamplerState** currentState,
+			const SGGraphicalEntityID& entity, ID3D11DeviceContext* context,
+			void(_stdcall ID3D11DeviceContext::*func)(UINT, UINT, ID3D11SamplerState *const*));
 
 		ID3D11Buffer* GetBuffer(const PipelineComponent& component, const SGGraphicalEntityID& entity, ID3D11DeviceContext* context);
 		ID3D11SamplerState* GetSamplerState(const PipelineComponent& component, const SGGraphicalEntityID& entity);
