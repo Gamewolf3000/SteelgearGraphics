@@ -14,7 +14,13 @@ SG::D3D11TextureHandler::~D3D11TextureHandler()
 		case TextureType::TEXTURE_1D:
 			ReleaseCOM(texture.second.texture.texture1D);
 			break;
+		case TextureType::TEXTURE_ARRAY_1D:
+			ReleaseCOM(texture.second.texture.texture1D);
+			break;
 		case TextureType::TEXTURE_2D:
+			ReleaseCOM(texture.second.texture.texture2D);
+			break;
+		case TextureType::TEXTURE_ARRAY_2D:
 			ReleaseCOM(texture.second.texture.texture2D);
 			break;
 		case TextureType::TEXTURE_3D:
@@ -188,6 +194,66 @@ SG::SGResult SG::D3D11TextureHandler::CreateSRV(const SGGuid & guid, const SGGui
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11TextureHandler::CreateSRVTextureArray(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels, UINT firstArraySlice, UINT arraySize)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+	{
+		textures.unlock();
+		return SGResult::GUID_MISSING;
+	}
+
+	textures.unlock();
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = GetSRVDimension(storedData->second.type);
+
+	switch (storedData->second.type)
+	{
+	case TextureType::TEXTURE_ARRAY_1D:
+		desc.Texture1DArray.MostDetailedMip = mostDetailedMip;
+		desc.Texture1DArray.MipLevels = mipLevels;
+		desc.Texture1DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture1DArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_ARRAY_2D:
+		desc.Texture2DArray.MostDetailedMip = mostDetailedMip;
+		desc.Texture2DArray.MipLevels = mipLevels;
+		desc.Texture2DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture2DArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_ARRAY_MULTISAMPLED_2D:
+		desc.Texture2DMSArray.FirstArraySlice = firstArraySlice;
+		desc.Texture2DMSArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_ARRAY_CUBE:
+		desc.TextureCubeArray.MostDetailedMip = mostDetailedMip;
+		desc.TextureCubeArray.MipLevels = mipLevels;
+		desc.TextureCubeArray.First2DArrayFace = firstArraySlice;
+		desc.TextureCubeArray.NumCubes = arraySize;
+		break;
+	default:
+		throw std::runtime_error("CreateSRV for array called refering to texture of incorrect type");
+		break;
+	}
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::SRV;
+
+	if (FAILED(device->CreateShaderResourceView(storedData->second.texture.texture2D, &desc, &toStore.view.srv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
 SG::SGResult SG::D3D11TextureHandler::CreateUAV(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice, UINT wSize)
 {
 	textures.lock();
@@ -254,6 +320,54 @@ SG::SGResult SG::D3D11TextureHandler::CreateUAV(const SGGuid & guid, const SGGui
 	toStore.type = ResourceViewType::UAV;
 
 	if (FAILED(device->CreateUnorderedAccessView(storedData->second.texture.texture2D, nullptr, &toStore.view.uav)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11TextureHandler::CreateUAVTextureArray(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice, UINT arraySize)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+	{
+		textures.unlock();
+		return SGResult::GUID_MISSING;
+	}
+
+	textures.unlock();
+
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = GetUAVDimension(storedData->second.type);
+
+	switch (storedData->second.type)
+	{
+	case TextureType::TEXTURE_ARRAY_1D:
+		desc.Texture1DArray.MipSlice = mipSlice;
+		desc.Texture1DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture1DArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_ARRAY_2D:
+		desc.Texture2DArray.MipSlice = mipSlice;
+		desc.Texture2DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture2DArray.ArraySize = arraySize;
+		break;
+	default:
+		throw std::runtime_error("CreateUAV for array called refering to texture of incorrect type");
+		break;
+	}
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::UAV;
+
+	if (FAILED(device->CreateUnorderedAccessView(storedData->second.texture.texture2D, &desc, &toStore.view.uav)))
 		return SGResult::FAIL;
 
 	toStore.resourceGuid = textureGuid;
@@ -343,6 +457,58 @@ SG::SGResult SG::D3D11TextureHandler::CreateRTV(const SGGuid & guid, const SGGui
 	return SGResult::OK;
 }
 
+SG::SGResult SG::D3D11TextureHandler::CreateRTVTextureArray(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice, UINT arraySize)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+	{
+		textures.unlock();
+		return SGResult::GUID_MISSING;
+	}
+
+	textures.unlock();
+
+	D3D11_RENDER_TARGET_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = GetRTVDimension(storedData->second.type);
+
+	switch (storedData->second.type)
+	{
+	case TextureType::TEXTURE_ARRAY_1D:
+		desc.Texture1DArray.MipSlice = mipSlice;
+		desc.Texture1DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture1DArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_ARRAY_2D:
+		desc.Texture2DArray.MipSlice = mipSlice;
+		desc.Texture2DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture2DArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_ARRAY_MULTISAMPLED_2D:
+		desc.Texture2DMSArray.FirstArraySlice = firstArraySlice;
+		desc.Texture2DMSArray.ArraySize = arraySize;
+		break;
+	default:
+		throw std::runtime_error("CreateRTV for array called refering to texture of incorrect type");
+		break;
+	}
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::RTV;
+
+	if (FAILED(device->CreateRenderTargetView(storedData->second.texture.texture2D, &desc, &toStore.view.rtv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
 SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice)
 {
 	textures.lock();
@@ -403,6 +569,57 @@ SG::SGResult SG::D3D11TextureHandler::CreateDSV(const SGGuid & guid, const SGGui
 	toStore.type = ResourceViewType::DSV;
 
 	if (FAILED(device->CreateDepthStencilView(storedData->second.texture.texture2D, nullptr, &toStore.view.dsv)))
+		return SGResult::FAIL;
+
+	toStore.resourceGuid = textureGuid;
+	views.lock();
+	views[guid] = toStore;
+	views.unlock();
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11TextureHandler::CreateDSVTextureArray(const SGGuid & guid, const SGGuid & textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize)
+{
+	textures.lock();
+	auto storedData = textures.find(textureGuid);
+
+	if (storedData == textures.end())
+		return SGResult::GUID_MISSING;
+
+	textures.unlock();
+
+
+	D3D11_DEPTH_STENCIL_VIEW_DESC desc;
+	desc.Format = format;
+	desc.ViewDimension = GetDSVDimension(storedData->second.type);
+	desc.Flags = 0 | (readOnlyDepth ? D3D11_DSV_READ_ONLY_DEPTH : 0) | (readOnlyStencil ? D3D11_DSV_READ_ONLY_STENCIL : 0);
+
+	switch (storedData->second.type)
+	{
+	case TextureType::TEXTURE_ARRAY_1D:
+		desc.Texture1DArray.MipSlice = mipSlice;
+		desc.Texture1DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture1DArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_ARRAY_2D:
+		desc.Texture2DArray.MipSlice = mipSlice;
+		desc.Texture2DArray.FirstArraySlice = firstArraySlice;
+		desc.Texture2DArray.ArraySize = arraySize;
+		break;
+	case TextureType::TEXTURE_MULTISAMPLED_2D:
+		desc.Texture2DMSArray.FirstArraySlice = firstArraySlice;
+		desc.Texture2DMSArray.ArraySize = arraySize;
+		break;
+	default:
+		throw std::runtime_error("CreateDSV for array called refering to texture of incorrect type");
+		break;
+	}
+
+	D3D11ResourceViewData toStore;
+	toStore.type = ResourceViewType::DSV;
+
+	if (FAILED(device->CreateDepthStencilView(storedData->second.texture.texture2D, &desc, &toStore.view.dsv)))
 		return SGResult::FAIL;
 
 	toStore.resourceGuid = textureGuid;
