@@ -5,37 +5,6 @@ SG::D3D11ShaderManager::D3D11ShaderManager(ID3D11Device * device)
 	this->device = device;
 }
 
-SG::D3D11ShaderManager::~D3D11ShaderManager()
-{
-	for (auto& shader : shaders)
-	{
-		switch (shader.second.type)
-		{
-		case ShaderType::VERTEX_SHADER:
-			ReleaseCOM(shader.second.shader.vertex);
-			break;
-		case ShaderType::HULL_SHADER:
-			ReleaseCOM(shader.second.shader.hull);
-			break;
-		case ShaderType::DOMAIN_SHADER:
-			ReleaseCOM(shader.second.shader.domain);
-			break;
-		case ShaderType::GEOMETRY_SHADER:
-			ReleaseCOM(shader.second.shader.geometry);
-			break;
-		case ShaderType::PIXEL_SHADER:
-			ReleaseCOM(shader.second.shader.pixel);
-			break;
-		case ShaderType::COMPUTE_SHADER:
-			ReleaseCOM(shader.second.shader.compute);
-			break;
-		}
-	}
-
-	for (auto& layout : inputLayouts)
-		ReleaseCOM(layout.second.inputLayout);
-}
-
 SG::SGResult SG::D3D11ShaderManager::CreateInputLayout(const SGGuid& guid, const std::vector<SGInputElement>& inputElements, const void* shaderByteCode, UINT byteCodeLength)
 {
 	std::vector<D3D11_INPUT_ELEMENT_DESC> d3d11InputElements;
@@ -56,12 +25,14 @@ SG::SGResult SG::D3D11ShaderManager::CreateInputLayout(const SGGuid& guid, const
 
 	D3D11InputLayoutData toStore;
 	device->CreateInputLayout(&d3d11InputElements[0], static_cast<UINT>(d3d11InputElements.size()), shaderByteCode, byteCodeLength, &toStore.inputLayout);
-
-	inputLayouts.lock();
-	inputLayouts[guid] = toStore;
-	inputLayouts.unlock();
+	inputLayouts.AddElement(guid, std::move(toStore));
 
 	return SGResult::OK;
+}
+
+void SG::D3D11ShaderManager::RemoveInputLayout(const SGGuid& guid)
+{
+	inputLayouts.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11ShaderManager::CreateVertexShader(const SGGuid & guid, const void * shaderByteCode, SIZE_T byteCodeLength)
@@ -74,10 +45,52 @@ SG::SGResult SG::D3D11ShaderManager::CreateVertexShader(const SGGuid & guid, con
 	D3D11ShaderData toStore;
 	toStore.type = ShaderType::VERTEX_SHADER;
 	toStore.shader.vertex = vs;
+	shaders.AddElement(guid, std::move(toStore));
 
-	this->shaders.lock();
-	this->shaders[guid] = toStore;
-	this->shaders.unlock();
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11ShaderManager::CreateHullShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength)
+{
+	ID3D11HullShader* hs;
+
+	if (FAILED(device->CreateHullShader(shaderByteCode, byteCodeLength, nullptr, &hs)))
+		return SGResult::FAIL;
+
+	D3D11ShaderData toStore;
+	toStore.type = ShaderType::HULL_SHADER;
+	toStore.shader.hull = hs;
+	shaders.AddElement(guid, std::move(toStore));
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11ShaderManager::CreateDomainShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength)
+{
+	ID3D11DomainShader* ds;
+
+	if (FAILED(device->CreateDomainShader(shaderByteCode, byteCodeLength, nullptr, &ds)))
+		return SGResult::FAIL;
+
+	D3D11ShaderData toStore;
+	toStore.type = ShaderType::DOMAIN_SHADER;
+	toStore.shader.domain = ds;
+	shaders.AddElement(guid, std::move(toStore));
+
+	return SGResult::OK;
+}
+
+SG::SGResult SG::D3D11ShaderManager::CreateGeometryShader(const SGGuid& guid, const void* shaderByteCode, SIZE_T byteCodeLength)
+{
+	ID3D11GeometryShader* gs;
+
+	if (FAILED(device->CreateGeometryShader(shaderByteCode, byteCodeLength, nullptr, &gs)))
+		return SGResult::FAIL;
+
+	D3D11ShaderData toStore;
+	toStore.type = ShaderType::GEOMETRY_SHADER;
+	toStore.shader.geometry = gs;
+	shaders.AddElement(guid, std::move(toStore));
 
 	return SGResult::OK;
 }
@@ -92,10 +105,7 @@ SG::SGResult SG::D3D11ShaderManager::CreatePixelShader(const SGGuid & guid, cons
 	D3D11ShaderData toStore;
 	toStore.type = ShaderType::PIXEL_SHADER;
 	toStore.shader.pixel = ps;
-
-	this->shaders.lock();
-	this->shaders[guid] = toStore;
-	this->shaders.unlock();
+	shaders.AddElement(guid, std::move(toStore));
 
 	return SGResult::OK;
 }
@@ -110,62 +120,87 @@ SG::SGResult SG::D3D11ShaderManager::CreateComputeShader(const SGGuid & guid, co
 	D3D11ShaderData toStore;
 	toStore.type = ShaderType::COMPUTE_SHADER;
 	toStore.shader.compute = cs;
-
-	this->shaders.lock();
-	this->shaders[guid] = toStore;
-	this->shaders.unlock();
+	shaders.AddElement(guid, std::move(toStore));
 
 	return SGResult::OK;
 }
 
+void SG::D3D11ShaderManager::RemoveShader(const SGGuid& guid)
+{
+	shaders.RemoveElement(guid);
+}
+
+void SG::D3D11ShaderManager::FinishFrame()
+{
+	inputLayouts.FinishFrame();
+	shaders.FinishFrame();
+}
+
+void SG::D3D11ShaderManager::SwapFrame()
+{
+	inputLayouts.UpdateActive();
+	shaders.UpdateActive();
+}
+
 void SG::D3D11ShaderManager::SetInputLayout(const SGGuid & guid, ID3D11DeviceContext * context)
 {
-	inputLayouts.lock();
-
 	if constexpr (DEBUG_VERSION)
-		if (inputLayouts.find(guid) == inputLayouts.end())
+		if (!inputLayouts.HasElement(guid))
 			throw std::runtime_error("Error setting input layout, guid not found");
 
 	context->IASetInputLayout(inputLayouts[guid].inputLayout);
-
-	inputLayouts.unlock();
 }
 
 void SG::D3D11ShaderManager::SetVertexShader(const SGGuid & guid, ID3D11DeviceContext * context)
 {
-	shaders.lock();
-
 	if constexpr (DEBUG_VERSION)
-		if (shaders.find(guid) == shaders.end())
+		if (!shaders.HasElement(guid))
 			throw std::runtime_error("Error setting vertex shader, guid not found");
 
 	context->VSSetShader(shaders[guid].shader.vertex, nullptr, 0);
+}
 
-	shaders.unlock();
+void SG::D3D11ShaderManager::SetHullShader(const SGGuid& guid, ID3D11DeviceContext* context)
+{
+	if constexpr (DEBUG_VERSION)
+		if (!shaders.HasElement(guid))
+			throw std::runtime_error("Error setting hull shader, guid not found");
+
+	context->HSSetShader(shaders[guid].shader.hull, nullptr, 0);
+}
+
+void SG::D3D11ShaderManager::SetDomainShader(const SGGuid& guid, ID3D11DeviceContext* context)
+{
+	if constexpr (DEBUG_VERSION)
+		if (!shaders.HasElement(guid))
+			throw std::runtime_error("Error setting domain shader, guid not found");
+
+	context->DSSetShader(shaders[guid].shader.domain, nullptr, 0);
+}
+
+void SG::D3D11ShaderManager::SetGeometryShader(const SGGuid& guid, ID3D11DeviceContext* context)
+{
+	if constexpr (DEBUG_VERSION)
+		if (!shaders.HasElement(guid))
+			throw std::runtime_error("Error setting geometry shader, guid not found");
+
+	context->GSSetShader(shaders[guid].shader.geometry, nullptr, 0);
 }
 
 void SG::D3D11ShaderManager::SetPixelShader(const SGGuid & guid, ID3D11DeviceContext * context)
 {
-	shaders.lock();
-
 	if constexpr (DEBUG_VERSION)
-		if (shaders.find(guid) == shaders.end())
+		if (!shaders.HasElement(guid))
 			throw std::runtime_error("Error setting pixel shader, guid not found");
 
 	context->PSSetShader(shaders[guid].shader.pixel, nullptr, 0);
-
-	shaders.unlock();
 }
 
 void SG::D3D11ShaderManager::SetComputeShader(const SGGuid & guid, ID3D11DeviceContext * context)
 {
-	shaders.lock();
-
 	if constexpr (DEBUG_VERSION)
-		if (shaders.find(guid) == shaders.end())
+		if (!shaders.HasElement(guid))
 			throw std::runtime_error("Error setting compute shader, guid not found");
 
 	context->CSSetShader(shaders[guid].shader.compute, nullptr, 0);
-
-	shaders.unlock();
 }

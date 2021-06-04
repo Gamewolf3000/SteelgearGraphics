@@ -73,8 +73,8 @@ namespace SG
 	protected:
 
 		void RenderThreadFunction();
-		virtual void SwapUpdateBuffer() = 0;
-		virtual void SwapToWorkWithBuffer() = 0;
+		virtual void FinishFrame() = 0;
+		virtual void SwapFrame() = 0;
 		virtual void ExecuteJobs(const std::vector<SGGraphicsJob>& jobs) = 0;
 
 		std::mutex entityMutex;

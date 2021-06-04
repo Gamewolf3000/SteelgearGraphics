@@ -2,178 +2,84 @@
 
 SG::SGResult SG::D3D11BufferHandler::BindBufferToEntity(const SGGraphicalEntityID & entity, const SGGuid & bufferGuid, const SGGuid & bindGuid)
 {
-	this->UpdateEntity(entity, bufferGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		buffers.lock();
-		if (buffers.find(bufferGuid) == buffers.end())
-		{
-			buffers.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		buffers.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToEntity(entity, bufferGuid, bindGuid, buffers);
 }
 
 SG::SGResult SG::D3D11BufferHandler::BindBufferToGroup(const SGGuid & group, const SGGuid & bufferGuid, const SGGuid & bindGuid)
 {
-	UpdateGroup(group, bufferGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		buffers.lock();
-		if (buffers.find(bufferGuid) == buffers.end())
-		{
-			buffers.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		buffers.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToGroup(group, bufferGuid, bindGuid, buffers);
 }
 
 SG::SGResult SG::D3D11BufferHandler::BindOffsetToEntity(const SGGraphicalEntityID & entity, const SGGuid & offsetGuid, const SGGuid & bindGuid)
 {
-	this->UpdateEntity(entity, offsetGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		bufferOffsets.lock();
-		if (bufferOffsets.find(offsetGuid) == bufferOffsets.end())
-		{
-			bufferOffsets.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		bufferOffsets.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToEntity(entity, offsetGuid, bindGuid, bufferOffsets);
 }
 
 SG::SGResult SG::D3D11BufferHandler::BindOffsetToGroup(const SGGuid & group, const SGGuid & offsetGuid, const SGGuid & bindGuid)
 {
-	UpdateGroup(group, offsetGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		bufferOffsets.lock();
-		if (bufferOffsets.find(offsetGuid) == bufferOffsets.end())
-		{
-			bufferOffsets.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		bufferOffsets.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToGroup(group, offsetGuid, bindGuid, bufferOffsets);
 }
 
 SG::SGResult SG::D3D11BufferHandler::BindStrideToEntity(const SGGraphicalEntityID & entity, const SGGuid & strideGuid, const SGGuid & bindGuid)
 {
-	this->UpdateEntity(entity, strideGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		bufferStrides.lock();
-		if (bufferStrides.find(strideGuid) == bufferStrides.end())
-		{
-			bufferStrides.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		bufferStrides.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToEntity(entity, strideGuid, bindGuid, bufferStrides);
 }
 
 SG::SGResult SG::D3D11BufferHandler::BindStrideToGroup(const SGGuid & group, const SGGuid & strideGuid, const SGGuid & bindGuid)
 {
-	UpdateGroup(group, strideGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		bufferStrides.lock();
-		if (bufferStrides.find(strideGuid) == bufferStrides.end())
-		{
-			bufferStrides.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		bufferStrides.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToGroup(group, strideGuid, bindGuid, bufferStrides);
 }
 
 SG::SGResult SG::D3D11BufferHandler::BindViewToEntity(const SGGraphicalEntityID & entity, const SGGuid & viewGuid, const SGGuid & bindGuid)
 {
-	this->UpdateEntity(entity, viewGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		views.lock();
-		if (views.find(viewGuid) == views.end())
-		{
-			views.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		views.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToEntity(entity, viewGuid, bindGuid, views);
 }
 
 SG::SGResult SG::D3D11BufferHandler::BindViewToGroup(const SGGuid & group, const SGGuid & viewGuid, const SGGuid & bindGuid)
 {
-	UpdateGroup(group, viewGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		views.lock();
-		if (views.find(viewGuid) == views.end())
-		{
-			views.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		views.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToGroup(group, viewGuid, bindGuid, views);
 }
 
 void SG::D3D11BufferHandler::UpdateBuffer(const SGGuid & guid, const UpdateStrategy& updateStrategy, void * data, UINT subresource)
 {
+	D3D11BufferData& temp = buffers.GetElement(guid);
+	auto& ToUpdate = temp.updatedData.GetToUpdate();
+	memcpy(ToUpdate.data, data, ToUpdate.size);
+	ToUpdate.strategy = updateStrategy;
+	ToUpdate.subresource = subresource;
+	temp.updatedData.MarkAsUpdated();
+
 	frameBufferMutex.lock();
-	buffers.lock();
-	UpdateData& temp = buffers[guid].updatedData.GetToUpdate();
-	memcpy(temp.data, data, temp.size);
-	temp.strategy = updateStrategy;
-	temp.subresource = subresource;
-	buffers[guid].updatedData.MarkAsUpdated();
-	buffers.unlock();
 	updatedFrameBuffer.push_back(guid); // måste låsa frameBufferMutex pga detta, expansion kan resultera i problem
 	frameBufferMutex.unlock();
 }
 
-void SG::D3D11BufferHandler::SwapUpdateBuffer()
+void SG::D3D11BufferHandler::FinishFrame()
 {
 	// No need to lock since this function is called only by the render engine during certain conditions
-	SGGraphicsHandler::SwapUpdateBuffer();
-	
+	SGGraphicsHandler::FinishFrame();
+
+	buffers.FinishFrame();
+	views.FinishFrame();
+	bufferOffsets.FinishFrame();
+	bufferStrides.FinishFrame();
+
 	for (auto& guid : updatedFrameBuffer)
-		buffers[guid].updatedData.SwitchUpdateBuffer();
+		buffers.GetElement(guid).updatedData.SwitchUpdateBuffer();
 	
 	updatedTotalBuffer.insert(updatedTotalBuffer.end(), updatedFrameBuffer.begin(), updatedFrameBuffer.end());
 	updatedFrameBuffer.clear();
 }
 
-void SG::D3D11BufferHandler::SwapToWorkWithBuffer()
+void SG::D3D11BufferHandler::SwapFrame()
 {
 	// No need to lock since this function is called only by the render engine during certain conditions
-	SGGraphicsHandler::SwapToWorkWithBuffer();
+	SGGraphicsHandler::SwapFrame();
+
+	buffers.UpdateActive();
+	views.UpdateActive();
+	bufferOffsets.UpdateActive();
+	bufferStrides.UpdateActive();
 
 	for (auto& guid : updatedTotalBuffer)
 		buffers[guid].updatedData.SwitchActiveBuffer();
@@ -195,45 +101,17 @@ void SG::D3D11BufferHandler::UpdateBufferGPU(D3D11BufferData & toUpdate, ID3D11D
 
 ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11DeviceContext * context)
 {
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(guid) == buffers.end())
-		{
-			buffers.unlock();
-			throw std::runtime_error("Error, missing guid when fetching buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[guid];
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetGlobalElement(guid, buffers, "buffer");
 
 	if(bData.updatedData.Updated())
 		UpdateBufferGPU(bData, context);
-
-	buffers.unlock();
 
 	return bData.buffer;
 }
 
 ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11DeviceContext * context, const SGGuid & groupGuid)
 {
-	groupData.lock();
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(groupData[groupGuid][guid].GetActive()) == buffers.end())
-		{
-			buffers.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[groupData[groupGuid][guid].GetActive()];
-	buffers.unlock();
-	groupData.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, buffers, "buffer");
 
 	if (bData.updatedData.Updated())
 		UpdateBufferGPU(bData, context);
@@ -243,22 +121,7 @@ ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11Devi
 
 ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11DeviceContext * context, const SGGraphicalEntityID & entity)
 {
-	entityData.lock();
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(entityData[entity][guid].GetActive()) == buffers.end())
-		{
-			buffers.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[entityData[entity][guid].GetActive()];
-	buffers.unlock();
-	entityData.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetEntityElement(guid, entity, buffers, "buffer");
 
 	if (bData.updatedData.Updated())
 		UpdateBufferGPU(bData, context);
@@ -268,361 +131,73 @@ ID3D11Buffer * SG::D3D11BufferHandler::GetBuffer(const SGGuid & guid, ID3D11Devi
 
 ID3D11ShaderResourceView * SG::D3D11BufferHandler::GetSRV(const SGGuid & guid)
 {
-	views.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (views.find(guid) == views.end())
-		{
-			views.unlock();
-			throw std::runtime_error("Error fetching srv, guid does not exist");
-		}
-
-		if (views[guid].type != ResourceViewType::SRV)
-		{
-			views.unlock();
-			throw std::runtime_error("Error fetching srv, guid does not match an srv");
-		}
-	}
-
-	auto toReturn = views[guid].view.srv;
-	views.unlock();
-
-	return toReturn;
+	void* toReturn = SG::D3D11GraphicsHandler::GetGlobalResourceView(guid, ResourceViewType::SRV, views, "buffer");
+	return static_cast<ID3D11ShaderResourceView *>(toReturn);
 }
 
 ID3D11ShaderResourceView * SG::D3D11BufferHandler::GetSRV(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	views.lock();
-	groupData.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (groupData.find(groupGuid) == groupData.end())
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching srv, group does not exist");
-		}
-
-		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching srv, group does not have the guid");
-		}
-
-		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching srv, guid does not exist");
-		}
-
-		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::SRV)
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching srv, guid does not match an srv");
-		}
-	}
-
-	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.srv;
-	groupData.unlock();
-	views.unlock();
-
-	return toReturn;
+	void* toReturn = SG::D3D11GraphicsHandler::GetGroupResourceView(guid, groupGuid, ResourceViewType::SRV, views, "buffer");
+	return static_cast<ID3D11ShaderResourceView*>(toReturn);
 }
 
 ID3D11ShaderResourceView * SG::D3D11BufferHandler::GetSRV(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	views.lock();
-	entityData.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (entityData.find(entity) == entityData.end())
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching srv, entity does not exist");
-		}
-
-		if (entityData[entity].find(guid) == entityData[entity].end())
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching srv, entity does not have the guid");
-		}
-
-		if (views.find(entityData[entity][guid].GetActive()) == views.end())
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching srv, guid does not exist");
-		}
-
-		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::SRV)
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching srv, guid does not match an srv");
-		}
-	}
-
-	auto toReturn = views[entityData[entity][guid].GetActive()].view.srv;
-	entityData.unlock();
-	views.unlock();
-
-	return toReturn;
+	void* toReturn = SG::D3D11GraphicsHandler::GetEntityResourceView(guid, entity, ResourceViewType::SRV, views, "buffer");
+	return static_cast<ID3D11ShaderResourceView*>(toReturn);
 }
 
 ID3D11UnorderedAccessView * SG::D3D11BufferHandler::GetUAV(const SGGuid & guid)
 {
-	views.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (views.find(guid) == views.end())
-		{
-			views.unlock();
-			throw std::runtime_error("Error fetching uav, guid does not exist");
-		}
-
-		if (views[guid].type != ResourceViewType::UAV)
-		{
-			views.unlock();
-			throw std::runtime_error("Error fetching uav, guid does not match an uav");
-		}
-	}
-
-	auto toReturn = views[guid].view.uav;
-	views.unlock();
-
-	return toReturn;
+	void* toReturn = SG::D3D11GraphicsHandler::GetGlobalResourceView(guid, ResourceViewType::UAV, views, "buffer");
+	return static_cast<ID3D11UnorderedAccessView*>(toReturn);
 }
 
 ID3D11UnorderedAccessView * SG::D3D11BufferHandler::GetUAV(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	views.lock();
-	groupData.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (groupData.find(groupGuid) == groupData.end())
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching uav, group does not exist");
-		}
-
-		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching uav, group does not have the guid");
-		}
-
-		if (views.find(groupData[groupGuid][guid].GetActive()) == views.end())
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching uav, guid does not exist");
-		}
-
-		if (views[groupData[groupGuid][guid].GetActive()].type != ResourceViewType::UAV)
-		{
-			views.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching uav, guid does not match an uav");
-		}
-	}
-
-	auto toReturn = views[groupData[groupGuid][guid].GetActive()].view.uav;
-	groupData.unlock();
-	views.unlock();
-
-	return toReturn;
+	void* toReturn = SG::D3D11GraphicsHandler::GetGroupResourceView(guid, groupGuid, ResourceViewType::UAV, views, "buffer");
+	return static_cast<ID3D11UnorderedAccessView*>(toReturn);
 }
 
 ID3D11UnorderedAccessView * SG::D3D11BufferHandler::GetUAV(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	views.lock();
-	entityData.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (entityData.find(entity) == entityData.end())
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching uav, entity does not exist");
-		}
-
-		if (entityData[entity].find(guid) == entityData[entity].end())
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching uav, entity does not have the guid");
-		}
-
-		if (views.find(entityData[entity][guid].GetActive()) == views.end())
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching uav, guid does not exist");
-		}
-
-		if (views[entityData[entity][guid].GetActive()].type != ResourceViewType::UAV)
-		{
-			views.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching uav, guid does not match an uav");
-		}
-	}
-
-	auto toReturn = views[entityData[entity][guid].GetActive()].view.uav;
-	entityData.unlock();
-	views.unlock();
-
-	return toReturn;
+	void* toReturn = SG::D3D11GraphicsHandler::GetEntityResourceView(guid, entity, ResourceViewType::UAV, views, "buffer");
+	return static_cast<ID3D11UnorderedAccessView*>(toReturn);
 }
 
 UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid)
 {
-	bufferOffsets.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (bufferOffsets.find(guid) == bufferOffsets.end())
-		{
-			bufferOffsets.unlock();
-			throw std::runtime_error("Error, missing guid when fetching offset");
-		}
-	}
-
-	UINT toReturn = bufferOffsets[guid];
-	bufferOffsets.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGlobalElement(guid, bufferOffsets, "offset");
 }
 
 UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	groupData.lock();
-	bufferOffsets.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (bufferOffsets.find(groupData[groupGuid][guid].GetActive()) == bufferOffsets.end())
-		{
-			bufferOffsets.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching offset");
-		}
-	}
-
-	UINT toReturn = bufferOffsets[groupData[groupGuid][guid].GetActive()];
-	bufferOffsets.unlock();
-	groupData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, bufferOffsets, "offset");
 }
 
 UINT SG::D3D11BufferHandler::GetOffset(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	entityData.lock();
-	bufferOffsets.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (bufferOffsets.find(entityData[entity][guid].GetActive()) == bufferOffsets.end())
-		{
-			bufferOffsets.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching offset");
-		}
-	}
-
-	UINT toReturn = bufferOffsets[entityData[entity][guid].GetActive()];
-	bufferOffsets.unlock();
-	entityData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetEntityElement(guid, entity, bufferOffsets, "offset");
 }
 
 UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid)
 {
-	bufferStrides.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (bufferStrides.find(guid) == bufferStrides.end())
-		{
-			bufferStrides.unlock();
-			throw std::runtime_error("Error, missing guid when fetching stride");
-		}
-	}
-
-	UINT toReturn = bufferStrides[guid];
-	bufferStrides.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGlobalElement(guid, bufferStrides, "stride");
 }
 
 UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	groupData.lock();
-	bufferStrides.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (bufferStrides.find(groupData[groupGuid][guid].GetActive()) == bufferStrides.end())
-		{
-			bufferStrides.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching stride");
-		}
-	}
-
-	UINT toReturn = bufferStrides[groupData[groupGuid][guid].GetActive()];
-	bufferStrides.unlock();
-	groupData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, bufferStrides, "stride");
 }
 
 UINT SG::D3D11BufferHandler::GetStride(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	entityData.lock();
-	bufferStrides.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (bufferStrides.find(entityData[entity][guid].GetActive()) == bufferStrides.end())
-		{
-			bufferStrides.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching buffer");
-		}
-	}
-
-	UINT toReturn = bufferStrides[entityData[entity][guid].GetActive()];
-	bufferStrides.unlock();
-	entityData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetEntityElement(guid, entity, bufferStrides, "stride");
 }
 
 UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid)
 {
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(guid) == buffers.end())
-		{
-			buffers.unlock();
-			throw std::runtime_error("Error, missing guid when fetching element count of buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[guid];
-	buffers.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetGlobalElement(guid, buffers, "element count of buffer");
 
 	switch (bData.type)
 	{
@@ -637,22 +212,7 @@ UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid)
 
 UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	groupData.lock();
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(groupData[groupGuid][guid].GetActive()) == buffers.end())
-		{
-			buffers.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching element count of buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[groupData[groupGuid][guid].GetActive()];
-	buffers.unlock();
-	groupData.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, buffers, "element count of buffer");
 
 	switch (bData.type)
 	{
@@ -667,22 +227,7 @@ UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGuid &
 
 UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	entityData.lock();
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(entityData[entity][guid].GetActive()) == buffers.end())
-		{
-			buffers.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching element count of buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[entityData[entity][guid].GetActive()];
-	buffers.unlock();
-	entityData.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetEntityElement(guid, entity, buffers, "element count of buffer");
 
 	switch (bData.type)
 	{
@@ -697,19 +242,7 @@ UINT SG::D3D11BufferHandler::GetElementCount(const SGGuid & guid, const SGGraphi
 
 UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid)
 {
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(guid) == buffers.end())
-		{
-			buffers.unlock();
-			throw std::runtime_error("Error, missing guid when fetching size of vertice of a vertex buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[guid];
-	buffers.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetGlobalElement(guid, buffers, "size of vertice of a vertex buffer");
 
 	switch (bData.type)
 	{
@@ -722,22 +255,7 @@ UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid)
 
 UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	groupData.lock();
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(groupData[groupGuid][guid].GetActive()) == buffers.end())
-		{
-			buffers.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching size of vertice of a vertex buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[groupData[groupGuid][guid].GetActive()];
-	buffers.unlock();
-	groupData.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, buffers, "size of vertice of a vertex buffer");
 
 	switch (bData.type)
 	{
@@ -750,22 +268,7 @@ UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid, const SGGuid 
 
 UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	entityData.lock();
-	buffers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (buffers.find(entityData[entity][guid].GetActive()) == buffers.end())
-		{
-			buffers.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching size of vertice of a vertex buffer");
-		}
-	}
-
-	D3D11BufferData& bData = buffers[entityData[entity][guid].GetActive()];
-	buffers.unlock();
-	entityData.unlock();
+	D3D11BufferData& bData = SG::SGGraphicsHandler::GetEntityElement(guid, entity, buffers, "size of vertice of a vertex buffer");
 
 	switch (bData.type)
 	{
@@ -779,27 +282,6 @@ UINT SG::D3D11BufferHandler::GetVBElementSize(const SGGuid & guid, const SGGraph
 SG::D3D11BufferHandler::D3D11BufferHandler(ID3D11Device * device)
 {
 	this->device = device;
-}
-
-SG::D3D11BufferHandler::~D3D11BufferHandler()
-{
-	for (auto& buffer : buffers)
-		ReleaseCOM(buffer.second.buffer);
-
-	for (auto& view : views)
-	{
-		switch (view.second.type)
-		{
-		case ResourceViewType::SRV:
-			ReleaseCOM(view.second.view.srv);
-			break;
-		case ResourceViewType::UAV:
-			ReleaseCOM(view.second.view.uav);
-			break;
-		default:
-			break;
-		}
-	}
 }
 
 SG::SGResult SG::D3D11BufferHandler::CreateVertexBuffer(const SGGuid & guid, UINT size, UINT nrOfVertices,
@@ -850,11 +332,7 @@ SG::SGResult SG::D3D11BufferHandler::CreateVertexBuffer(const SGGuid & guid, UIN
 	if (FAILED(device->CreateBuffer(&desc, &bufferData, &toStore.buffer)))
 		return SGResult::FAIL;
 
-	buffers.lock();
-	buffers[guid] = std::move(toStore);
-	buffers.unlock();
-
-
+	buffers.AddElement(guid, std::move(toStore));
 	return SGResult::OK;
 }
 
@@ -890,10 +368,7 @@ SG::SGResult SG::D3D11BufferHandler::CreateIndexBuffer(const SGGuid & guid, UINT
 	if (FAILED(device->CreateBuffer(&desc, &bufferData, &toStore.buffer)))
 		return SGResult::FAIL;
 
-	buffers.lock();
-	buffers[guid] = std::move(toStore);
-	buffers.unlock();
-
+	buffers.AddElement(guid, std::move(toStore));
 	return SGResult::OK;
 }
 
@@ -933,47 +408,46 @@ SG::SGResult SG::D3D11BufferHandler::CreateConstantBuffer(const SGGuid & guid, U
 	if (FAILED(device->CreateBuffer(&desc, &bufferData, &toStore.buffer)))
 		return SGResult::FAIL;
 
-	buffers.lock();
-	buffers[guid] = std::move(toStore);
-	buffers.unlock();
-
+	buffers.AddElement(guid, std::move(toStore));
 	return SGResult::OK;
+}
+
+void SG::D3D11BufferHandler::RemoveBuffer(const SGGuid& guid)
+{
+	buffers.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11BufferHandler::CreateBufferOffset(const SGGuid & guid, UINT value)
 {
-	bufferOffsets.lock();
-	bufferOffsets[guid] = value;
-	bufferOffsets.unlock();
-
+	bufferOffsets.AddElement(guid, std::move(value));
 	return SGResult::OK;
+}
+
+void SG::D3D11BufferHandler::RemoveBufferOffset(const SGGuid& guid)
+{
+	bufferOffsets.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11BufferHandler::CreateBufferStride(const SGGuid & guid, UINT value)
 {
-	bufferStrides.lock();
-	bufferStrides[guid] = value;
-	bufferStrides.unlock();
-
+	bufferStrides.AddElement(guid, std::move(value));
 	return SGResult::OK;
+}
+
+void SG::D3D11BufferHandler::RemoveBufferStride(const SGGuid& guid)
+{
+	bufferStrides.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11BufferHandler::CreateSRV(const SGGuid & guid, const SGGuid & bufferGuid, DXGI_FORMAT format, UINT elementOffset, UINT elementWidth)
 {
-	buffers.lock();
-
 	if constexpr (DEBUG_VERSION)
 	{
-		if (buffers.find(bufferGuid) == buffers.end())
-		{
-			buffers.unlock();
-			entityData.unlock();
+		if (!buffers.Exists(bufferGuid))
 			return SG::SGResult::GUID_MISSING;
-		}
 	}
 
-	ID3D11Buffer* buffer = (*buffers.find(bufferGuid)).second.buffer;
-	buffers.unlock();
+	ID3D11Buffer* buffer = buffers.GetElement(bufferGuid).buffer;
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC desc;
 	desc.Format = format;
@@ -987,29 +461,20 @@ SG::SGResult SG::D3D11BufferHandler::CreateSRV(const SGGuid & guid, const SGGuid
 
 	toStore.resourceGuid = bufferGuid;
 	toStore.type = SG::ResourceViewType::SRV;
-	views.lock();
-	views[guid] = toStore;
-	views.unlock();
+	views.AddElement(guid, std::move(toStore));
 
 	return SG::SGResult::OK;
 }
 
 SG::SGResult SG::D3D11BufferHandler::CreateUAV(const SGGuid & guid, const SGGuid & bufferGuid, DXGI_FORMAT format, UINT firstElement, UINT numberOfElements, bool counter, bool append, bool raw)
 {
-	buffers.lock();
-
 	if constexpr (DEBUG_VERSION)
 	{
-		if (buffers.find(bufferGuid) == buffers.end())
-		{
-			buffers.unlock();
-			entityData.unlock();
+		if (!buffers.Exists(bufferGuid))
 			return SG::SGResult::GUID_MISSING;
-		}
 	}
 
-	ID3D11Buffer* buffer = (*buffers.find(bufferGuid)).second.buffer;
-	buffers.unlock();
+	ID3D11Buffer* buffer = buffers.GetElement(bufferGuid).buffer;
 
 	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
 	desc.Format = format;
@@ -1024,9 +489,12 @@ SG::SGResult SG::D3D11BufferHandler::CreateUAV(const SGGuid & guid, const SGGuid
 
 	toStore.resourceGuid = bufferGuid;
 	toStore.type = SG::ResourceViewType::UAV;
-	views.lock();
-	views[guid] = toStore;
-	views.unlock();
+	views.AddElement(guid, std::move(toStore));
 
 	return SG::SGResult::OK;
+}
+
+void SG::D3D11BufferHandler::RemoveView(const SGGuid& guid)
+{
+	views.RemoveElement(guid);
 }

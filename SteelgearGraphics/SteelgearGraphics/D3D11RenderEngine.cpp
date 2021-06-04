@@ -148,22 +148,26 @@ void SG::D3D11RenderEngine::CreateSwapChain(const SGRenderSettings & settings)
 	}
 }
 
-void SG::D3D11RenderEngine::SwapUpdateBuffer()
+void SG::D3D11RenderEngine::FinishFrame()
 {
-	bufferHandler->SwapUpdateBuffer();
-	samplerHandler->SwapUpdateBuffer();
-	stateHandler->SwapUpdateBuffer();
-	textureHandler->SwapUpdateBuffer();
-	drawCallHandler->SwapUpdateBuffer();
+	bufferHandler->FinishFrame();
+	samplerHandler->FinishFrame();
+	shaderManager->FinishFrame();
+	stateHandler->FinishFrame();
+	textureHandler->FinishFrame();
+	pipelineManager->FinishFrame();
+	drawCallHandler->FinishFrame();
 }
 
-void SG::D3D11RenderEngine::SwapToWorkWithBuffer()
+void SG::D3D11RenderEngine::SwapFrame()
 {
-	bufferHandler->SwapToWorkWithBuffer();
-	samplerHandler->SwapUpdateBuffer();
-	stateHandler->SwapToWorkWithBuffer();
-	textureHandler->SwapToWorkWithBuffer();
-	drawCallHandler->SwapToWorkWithBuffer();
+	bufferHandler->SwapFrame();
+	samplerHandler->SwapFrame();
+	shaderManager->SwapFrame();
+	stateHandler->SwapFrame();
+	textureHandler->SwapFrame();
+	pipelineManager->SwapFrame();
+	drawCallHandler->SwapFrame();
 }
 
 void SG::D3D11RenderEngine::ExecuteJobs(const std::vector<SGGraphicsJob>& jobs)
@@ -270,6 +274,72 @@ D3D11_PRIMITIVE_TOPOLOGY SG::D3D11RenderEngine::TranslateTopology(const SGTopolo
 		return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	case SGTopology::TRIANGLESTRIP:
 		return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+	case SGTopology::CONTROL_POINT_PATCHLIST_1:
+		return D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_2:
+		return D3D11_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_3:
+		return D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_4:
+		return D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_5:
+		return D3D11_PRIMITIVE_TOPOLOGY_5_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_6:
+		return D3D11_PRIMITIVE_TOPOLOGY_6_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_7:
+		return D3D11_PRIMITIVE_TOPOLOGY_7_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_8:
+		return D3D11_PRIMITIVE_TOPOLOGY_8_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_9:
+		return D3D11_PRIMITIVE_TOPOLOGY_9_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_10:
+		return D3D11_PRIMITIVE_TOPOLOGY_10_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_11:
+		return D3D11_PRIMITIVE_TOPOLOGY_11_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_12:
+		return D3D11_PRIMITIVE_TOPOLOGY_12_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_13:
+		return D3D11_PRIMITIVE_TOPOLOGY_13_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_14:
+		return D3D11_PRIMITIVE_TOPOLOGY_14_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_15:
+		return D3D11_PRIMITIVE_TOPOLOGY_15_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_16:
+		return D3D11_PRIMITIVE_TOPOLOGY_16_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_17:
+		return D3D11_PRIMITIVE_TOPOLOGY_17_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_18:
+		return D3D11_PRIMITIVE_TOPOLOGY_18_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_19:
+		return D3D11_PRIMITIVE_TOPOLOGY_19_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_20:
+		return D3D11_PRIMITIVE_TOPOLOGY_20_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_21:
+		return D3D11_PRIMITIVE_TOPOLOGY_21_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_22:
+		return D3D11_PRIMITIVE_TOPOLOGY_22_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_23:
+		return D3D11_PRIMITIVE_TOPOLOGY_23_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_24:
+		return D3D11_PRIMITIVE_TOPOLOGY_24_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_25:
+		return D3D11_PRIMITIVE_TOPOLOGY_25_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_26:
+		return D3D11_PRIMITIVE_TOPOLOGY_26_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_27:
+		return D3D11_PRIMITIVE_TOPOLOGY_27_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_28:
+		return D3D11_PRIMITIVE_TOPOLOGY_28_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_29:
+		return D3D11_PRIMITIVE_TOPOLOGY_29_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_30:
+		return D3D11_PRIMITIVE_TOPOLOGY_30_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_31:
+		return D3D11_PRIMITIVE_TOPOLOGY_31_CONTROL_POINT_PATCHLIST;
+	case SGTopology::CONTROL_POINT_PATCHLIST_32:
+		return D3D11_PRIMITIVE_TOPOLOGY_32_CONTROL_POINT_PATCHLIST;
+
 	default:
 		return D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	}
@@ -280,10 +350,18 @@ void SG::D3D11RenderEngine::SetShaders(const SGRenderJob & job, ID3D11DeviceCont
 	context->IASetPrimitiveTopology(TranslateTopology(job.topology));
 	shaderManager->SetInputLayout(job.inputAssembly, context);
 	shaderManager->SetVertexShader(job.vertexShader.shader, context);
-	//hull
-	//domain
-	//geometry
-	shaderManager->SetPixelShader(job.pixelShader.shader, context);
+	
+	if (job.hullShader.shader != SG::SGGuid())
+		shaderManager->SetHullShader(job.hullShader.shader, context);
+
+	if (job.domainShader.shader != SG::SGGuid())
+		shaderManager->SetDomainShader(job.domainShader.shader, context);
+
+	if (job.geometryShader.shader != SG::SGGuid())
+		shaderManager->SetGeometryShader(job.geometryShader.shader, context);
+	
+	if (job.pixelShader.shader != SG::SGGuid())
+		shaderManager->SetPixelShader(job.pixelShader.shader, context);
 }
 
 void SG::D3D11RenderEngine::HandleGlobalRenderJob(const SGRenderJob & job, ID3D11DeviceContext * context)
@@ -588,7 +666,8 @@ void SG::D3D11RenderEngine::ClearOMViews(const SGRenderJob& job, ID3D11DeviceCon
 		for (int i = 0; i < nrOfUAVsToClear; ++i)
 			if(uavs[uavsToClear[i]] != nullptr)
 				uavs[uavsToClear[i]]->Release();
-			
+	
+		//No need to release dsv, only fetched if cleared and then it is already released at this point
 	}
 }
 

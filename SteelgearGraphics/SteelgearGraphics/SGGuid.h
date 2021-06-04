@@ -17,7 +17,7 @@ namespace SG
 		SGGuid();
 		SGGuid(const std::string& identifier);
 
-		~SGGuid();
+		~SGGuid() = default;
 
 		bool operator==(const SGGuid& other) const;
 		bool operator!=(const SGGuid& other) const;

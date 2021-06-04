@@ -2,20 +2,17 @@
 
 #include <d3d11_4.h>
 
-#include "SGGraphicsHandler.h"
-
-#include "D3D11CommonTypes.h"
-#include "TripleBufferedData.h"
-
+#include "D3D11GraphicsHandler.h"
+#include "D3D11BufferData.h"
 
 namespace SG
 {
-	class D3D11BufferHandler : public SGGraphicsHandler
+	class D3D11BufferHandler : public D3D11GraphicsHandler
 	{
 	public:
 
 		D3D11BufferHandler(ID3D11Device* device);
-		~D3D11BufferHandler();
+		~D3D11BufferHandler() = default;
 
 		SGResult CreateVertexBuffer(const SGGuid& guid, UINT size, UINT nrOfVertices, bool dynamic, bool streamOut, const void* const data);
 		SGResult CreateIndexBuffer(const SGGuid& guid, UINT size, UINT nrOfIndices, bool dynamic, const void* const data);
@@ -24,10 +21,13 @@ namespace SG
 		SGResult CreateAppendConsumeBuffer(const SGGuid& guid, UINT size, UINT structsize, void* data);
 		SGResult CreateByteAdressBuffer(const SGGuid& guid, UINT size, bool gpuWritable, void* data);
 		SGResult CreateIndirectArgsBuffer(const SGGuid& guid, UINT size, void* data);
+		void RemoveBuffer(const SGGuid& guid);
 
 		SGResult CreateBufferOffset(const SGGuid& guid, UINT value);
-		SGResult CreateBufferStride(const SGGuid& guid, UINT value);
+		void RemoveBufferOffset(const SGGuid& guid);
 
+		SGResult CreateBufferStride(const SGGuid& guid, UINT value);
+		void RemoveBufferStride(const SGGuid& guid);
 
 		/**
 			bufferGuid is the BufferData to create a SRV for
@@ -38,6 +38,8 @@ namespace SG
 			bufferGuid is the BufferData to create a UAV for
 		*/
 		SGResult CreateUAV(const SGGuid& guid, const SGGuid& bufferGuid, DXGI_FORMAT format, UINT firstElement, UINT numberOfElements, bool counter, bool append, bool raw);
+
+		void RemoveView(const SGGuid& guid);
 
 		SGResult BindBufferToEntity(const SGGraphicalEntityID& entity, const SGGuid& bufferGuid, const SGGuid& bindGuid);
 		SGResult BindBufferToGroup(const SGGuid& group, const SGGuid& bufferGuid, const SGGuid& bindGuid);
@@ -52,50 +54,14 @@ namespace SG
 
 		void UpdateBuffer(const SGGuid& guid, const UpdateStrategy& updateStrategy, void* data, UINT subresource = 0);
 
-
 	private:
 
 		friend class D3D11RenderEngine;
 
-		enum class BufferType
-		{
-			VERTEX_BUFFER,
-			INDEX_BUFFER,
-			CONSTANT_BUFFER,
-			STRUCTURED_BUFFER,
-			APPEND_CONSUME_BUFFER,
-			BYTE_ADRESS_BUFFER,
-			INDIRECT_ARGS_BUFFER
-		};
-
-		struct VertexBufferData
-		{
-			UINT nrOfVertices;
-			UINT vertexSize;
-		};
-
-		struct IndexBufferData
-		{
-			UINT nrOfIndices;
-		};
-
-		struct D3D11BufferData
-		{
-			BufferType type;
-			//bool updated = false;
-			union
-			{
-				VertexBufferData vb;
-				IndexBufferData ib;
-			} specificData;
-			ID3D11Buffer* buffer = nullptr;
-			TripleBufferedData<UpdateData> updatedData;
-		};
-
-		LockableUnorderedMap<SGGuid, D3D11BufferData> buffers;
-		LockableUnorderedMap<SGGuid, D3D11ResourceViewData> views;
-		LockableUnorderedMap<SGGuid, UINT> bufferOffsets;
-		LockableUnorderedMap<SGGuid, UINT> bufferStrides;
+		FrameMap<SGGuid, D3D11BufferData> buffers;
+		FrameMap<SGGuid, D3D11ResourceViewData> views;
+		FrameMap<SGGuid, UINT> bufferOffsets;
+		FrameMap<SGGuid, UINT> bufferStrides;
 
 		std::mutex frameBufferMutex;
 		std::vector<SGGuid> updatedFrameBuffer;
@@ -103,8 +69,8 @@ namespace SG
 
 		ID3D11Device* device;
 
-		void SwapUpdateBuffer() override;
-		void SwapToWorkWithBuffer() override;
+		void FinishFrame() override;
+		void SwapFrame() override;
 
 		void UpdateBufferGPU(D3D11BufferData& toUpdate, ID3D11DeviceContext* context);
 

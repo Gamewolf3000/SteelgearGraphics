@@ -5,12 +5,6 @@ SG::D3D11SamplerHandler::D3D11SamplerHandler(ID3D11Device * device)
 	this->device = device;
 }
 
-SG::D3D11SamplerHandler::~D3D11SamplerHandler()
-{
-	for (auto& sampler : samplers)
-		ReleaseCOM(sampler.second.sampler);
-}
-
 SG::SGResult SG::D3D11SamplerHandler::CreateSampler(const SGGuid & guid, Filter filter, TextureAdressMode adressU, TextureAdressMode adressV, TextureAdressMode adressW, FLOAT mipLODBias, UINT maxAnisotropy, ComparisonFunction comparisonFunc, FLOAT borderColor[4], FLOAT minLOD, FLOAT maxLOD)
 {
 	D3D11_SAMPLER_DESC desc;
@@ -29,51 +23,38 @@ SG::SGResult SG::D3D11SamplerHandler::CreateSampler(const SGGuid & guid, Filter 
 	if(FAILED(device->CreateSamplerState(&desc, &toStore.sampler)))
 		return SGResult::FAIL;
 
-	samplers.lock();
-	samplers[guid] = toStore;
-	samplers.unlock();
+	samplers.AddElement(guid, std::move(toStore));
 
 	return SGResult::OK;
+}
+
+void SG::D3D11SamplerHandler::RemoveSampler(const SGGuid& guid)
+{
+	samplers.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11SamplerHandler::BindSamplerToEntity(const SGGraphicalEntityID & entity, const SGGuid & samplerGuid, const SGGuid & bindGuid)
 {
-	entityData.lock();
-	entityData[entity][bindGuid] = samplerGuid;
-	entityData.unlock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		samplers.lock();
-		if (samplers.find(samplerGuid) == samplers.end())
-		{
-			samplers.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		samplers.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToEntity(entity, samplerGuid, bindGuid, samplers);
 }
 
 SG::SGResult SG::D3D11SamplerHandler::BindSamplerToGroup(const SGGuid & group, const SGGuid & samplerGuid, const SGGuid & bindGuid)
 {
-	groupData.lock();
-	groupData[group][bindGuid] = samplerGuid;
-	groupData.unlock();
+	return SG::SGGraphicsHandler::BindElementToGroup(group, samplerGuid, bindGuid, samplers);
+}
 
-	if constexpr (DEBUG_VERSION)
-	{
-		samplers.lock();
-		if (samplers.find(samplerGuid) == samplers.end())
-		{
-			samplers.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		samplers.unlock();
-	}
+void SG::D3D11SamplerHandler::FinishFrame()
+{
+	SG::SGGraphicsHandler::FinishFrame();
 
-	return SGResult::OK;
+	samplers.FinishFrame();
+}
+
+void SG::D3D11SamplerHandler::SwapFrame()
+{
+	SG::SGGraphicsHandler::SwapFrame();
+
+	samplers.UpdateActive();
 }
 
 D3D11_FILTER SG::D3D11SamplerHandler::TranslateFilter(const Filter & filter)
@@ -255,60 +236,15 @@ D3D11_COMPARISON_FUNC SG::D3D11SamplerHandler::TranslateComparisonFunction(const
 
 ID3D11SamplerState * SG::D3D11SamplerHandler::GetSamplerState(const SGGuid & guid)
 {
-	samplers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (samplers.find(guid) == samplers.end())
-		{
-			samplers.unlock();
-			throw std::runtime_error("Error, missing guid when fetching sampler state");
-		}
-	}
-
-	ID3D11SamplerState* toReturn = samplers[guid].sampler;
-	samplers.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGlobalElement(guid, samplers, "sampler state").sampler;
 }
 
 ID3D11SamplerState * SG::D3D11SamplerHandler::GetSamplerState(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	groupData.lock();
-	samplers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (samplers.find(groupData[groupGuid][guid].GetActive()) == samplers.end())
-		{
-			samplers.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching sampler state");
-		}
-	}
-
-	ID3D11SamplerState* toReturn = samplers[groupData[groupGuid][guid].GetActive()].sampler;
-	samplers.unlock();
-	groupData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, samplers, "sampler state").sampler;
 }
 
 ID3D11SamplerState * SG::D3D11SamplerHandler::GetSamplerState(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	entityData.lock();
-	samplers.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (samplers.find(entityData[entity][guid].GetActive()) == samplers.end())
-		{
-			samplers.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching sampler state");
-		}
-	}
-
-	ID3D11SamplerState* toReturn = samplers[entityData[entity][guid].GetActive()].sampler;
-	samplers.unlock();
-	entityData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetEntityElement(guid, entity, samplers, "sampler state").sampler;
 }

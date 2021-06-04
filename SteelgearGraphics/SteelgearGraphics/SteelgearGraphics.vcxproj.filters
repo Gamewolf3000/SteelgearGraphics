@@ -14,30 +14,21 @@
     <Filter Include="Other">
       <UniqueIdentifier>{29844e19-c374-43df-b8e3-a56c58a81a44}</UniqueIdentifier>
     </Filter>
+    <Filter Include="D3D11\Data">
+      <UniqueIdentifier>{e3819a6c-0737-42bd-b1a1-7f0ee65d0741}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="D3D11\Handlers">
+      <UniqueIdentifier>{3f6589cc-cfa5-44dd-bf6e-6f240f0fe9fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="D3D11\Managers">
+      <UniqueIdentifier>{df8ef5a9-810d-4962-a18b-5aad7c4cfba6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="D3D11BufferHandler.h">
-      <Filter>D3D11</Filter>
-    </ClInclude>
     <ClInclude Include="D3D11CommonTypes.h">
       <Filter>D3D11</Filter>
     </ClInclude>
-    <ClInclude Include="D3D11PipelineManager.h">
-      <Filter>D3D11</Filter>
-    </ClInclude>
     <ClInclude Include="D3D11RenderEngine.h">
-      <Filter>D3D11</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11SamplerHandler.h">
-      <Filter>D3D11</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11ShaderManager.h">
-      <Filter>D3D11</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11StateHandler.h">
-      <Filter>D3D11</Filter>
-    </ClInclude>
-    <ClInclude Include="D3D11TextureHandler.h">
       <Filter>D3D11</Filter>
     </ClInclude>
     <ClInclude Include="SGGraphicsHandler.h">
@@ -64,18 +55,66 @@
     <ClInclude Include="TripleBufferedData.h">
       <Filter>Other</Filter>
     </ClInclude>
+    <ClInclude Include="FrameMap.h">
+      <Filter>Other</Filter>
+    </ClInclude>
+    <ClInclude Include="LayeredFrameMap.h">
+      <Filter>Other</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11BufferData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11ResourceViewData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11SetData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11SamplerData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11StateData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11TextureData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11ViewportData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11BufferHandler.h">
+      <Filter>D3D11\Handlers</Filter>
+    </ClInclude>
     <ClInclude Include="D3D11DrawCallHandler.h">
-      <Filter>D3D11</Filter>
+      <Filter>D3D11\Handlers</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11GraphicsHandler.h">
+      <Filter>D3D11\Handlers</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11SamplerHandler.h">
+      <Filter>D3D11\Handlers</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11TextureHandler.h">
+      <Filter>D3D11\Handlers</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11StateHandler.h">
+      <Filter>D3D11\Handlers</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11PipelineManager.h">
+      <Filter>D3D11\Managers</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11ShaderManager.h">
+      <Filter>D3D11\Managers</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11ShaderData.h">
+      <Filter>D3D11\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="D3D11InputLayoutData.h">
+      <Filter>D3D11\Data</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="D3D11PipelineManager.cpp">
-      <Filter>D3D11</Filter>
-    </ClCompile>
     <ClCompile Include="D3D11RenderEngine.cpp">
-      <Filter>D3D11</Filter>
-    </ClCompile>
-    <ClCompile Include="D3D11TextureHandler.cpp">
       <Filter>D3D11</Filter>
     </ClCompile>
     <ClCompile Include="SGGuid.cpp">
@@ -87,26 +126,56 @@
     <ClCompile Include="SGThreadPool.cpp">
       <Filter>Other</Filter>
     </ClCompile>
-    <ClCompile Include="D3D11BufferHandler.cpp">
-      <Filter>D3D11</Filter>
-    </ClCompile>
     <ClCompile Include="D3D11CommonTypes.cpp">
-      <Filter>D3D11</Filter>
-    </ClCompile>
-    <ClCompile Include="D3D11ShaderManager.cpp">
-      <Filter>D3D11</Filter>
-    </ClCompile>
-    <ClCompile Include="D3D11DrawCallHandler.cpp">
       <Filter>D3D11</Filter>
     </ClCompile>
     <ClCompile Include="SGGraphicsHandler.cpp">
       <Filter>TopInterface</Filter>
     </ClCompile>
-    <ClCompile Include="D3D11StateHandler.cpp">
-      <Filter>D3D11</Filter>
+    <ClCompile Include="D3D11BufferData.cpp">
+      <Filter>D3D11\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11ResourceViewData.cpp">
+      <Filter>D3D11\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11SamplerData.cpp">
+      <Filter>D3D11\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11StateData.cpp">
+      <Filter>D3D11\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11TextureData.cpp">
+      <Filter>D3D11\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11BufferHandler.cpp">
+      <Filter>D3D11\Handlers</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11DrawCallHandler.cpp">
+      <Filter>D3D11\Handlers</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11GraphicsHandler.cpp">
+      <Filter>D3D11\Handlers</Filter>
     </ClCompile>
     <ClCompile Include="D3D11SamplerHandler.cpp">
-      <Filter>D3D11</Filter>
+      <Filter>D3D11\Handlers</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11TextureHandler.cpp">
+      <Filter>D3D11\Handlers</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11StateHandler.cpp">
+      <Filter>D3D11\Handlers</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11PipelineManager.cpp">
+      <Filter>D3D11\Managers</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11ShaderManager.cpp">
+      <Filter>D3D11\Managers</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11ShaderData.cpp">
+      <Filter>D3D11\Data</Filter>
+    </ClCompile>
+    <ClCompile Include="D3D11InputLayoutData.cpp">
+      <Filter>D3D11\Data</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

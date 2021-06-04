@@ -32,15 +32,17 @@ namespace SG
 	public:
 
 		D3D11DrawCallHandler(ID3D11Device* device);
-		~D3D11DrawCallHandler();
+		~D3D11DrawCallHandler() = default;
 
 		SGResult CreateDrawCall(const SGGuid& guid, UINT vertexCount = BUFFER0, UINT startVertexLocation = 0);
 		SGResult CreateDrawIndexedCall(const SGGuid& guid, UINT indexCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0);
 		SGResult CreateDrawInstancedCall(const SGGuid& guid, UINT vertexCountPerInstance = BUFFER0, UINT instanceCount = 0, UINT startVertexLocation = 0, UINT startInstanceLocation = 0);
 		SGResult CreateDrawIndexedInstancedCall(const SGGuid& guid, UINT indexCountPerInstance = 0, UINT instanceCount = 0, UINT startIndexLocation = 0, INT baseVertexLocation = 0, UINT startInstanceLocation = 0);
+		void RemoveDrawCall(const SGGuid& guid);
 
 		SGResult CreateDispatchCall(const SGGuid& guid, UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ);
 		SGResult CreateDispatchIndirectCall(const SGGuid& guid, const SGGuid& bufferGuid, UINT alignedByteOffsetForArgs);
+		void RemoveDispatchCall(const SGGuid& guid);
 
 		SGResult BindDrawCallToEntity(const SGGraphicalEntityID& entity, const SGGuid& callGuid, const SGGuid& bindGuid);
 		SGResult BindDrawCallToGroup(const SGGuid& group, const SGGuid& callGuid, const SGGuid& bindGuid);
@@ -146,8 +148,11 @@ namespace SG
 
 		ID3D11Device* device;
 
-		LockableUnorderedMap<SGGuid, DrawCall> drawCalls;
-		LockableUnorderedMap<SGGuid, DispatchCall> dispatchCalls;
+		FrameMap<SGGuid, DrawCall> drawCalls;
+		FrameMap<SGGuid, DispatchCall> dispatchCalls;
+
+		void FinishFrame() override;
+		void SwapFrame() override;
 
 		DrawCall GetDrawCall(const SGGuid& guid);
 		DrawCall GetDrawCall(const SGGuid& guid, const SGGuid& groupGuid);

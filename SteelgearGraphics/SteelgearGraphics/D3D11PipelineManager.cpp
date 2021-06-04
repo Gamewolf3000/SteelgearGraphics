@@ -5,58 +5,84 @@ SG::D3D11PipelineManager::D3D11PipelineManager(ID3D11Device * device)
 	this->device = device;
 }
 
-SG::D3D11PipelineManager::~D3D11PipelineManager()
-{
-
-}
-
 SG::SGResult SG::D3D11PipelineManager::CreateRenderJob(const SGGuid & guid, const SGRenderJob & job)
 {
-	renderJobs.lock();
-	renderJobs[guid] = job;
-	renderJobs.unlock();
-
+	renderJobs.AddElement(guid, job);
 	return SGResult::OK;
+}
+
+void SG::D3D11PipelineManager::RemoveRenderJob(const SGGuid& guid)
+{
+	renderJobs.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11PipelineManager::CreateComputeJob(const SGGuid & guid, const SGComputeJob & job)
 {
-	computeJobs.lock();
-	computeJobs[guid] = job;
-	computeJobs.unlock();
-
+	computeJobs.AddElement(guid, job);
 	return SGResult::OK;
+}
+
+void SG::D3D11PipelineManager::RemoveComputeJob(const SGGuid& guid)
+{
+	computeJobs.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11PipelineManager::CreateClearRenderTargetJob(const SGGuid & guid, const SGClearRenderTargetJob & job)
 {
-	clearRenderTargetJobs.lock();
-	clearRenderTargetJobs[guid] = job;
-	clearRenderTargetJobs.unlock();
+	clearRenderTargetJobs.AddElement(guid, job);
 	return SGResult::OK;
+}
+
+void SG::D3D11PipelineManager::RemoveClearRenderTargetJob(const SGGuid& guid)
+{
+	clearRenderTargetJobs.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11PipelineManager::CreateClearDepthStencilJob(const SGGuid & guid, const SGClearDepthStencilJob & job)
 {
-	clearDepthStencilJobs.lock();
-	clearDepthStencilJobs[guid] = job;
-	clearDepthStencilJobs.unlock();
+	clearDepthStencilJobs.AddElement(guid, job);
 	return SGResult::OK;
+}
+
+void SG::D3D11PipelineManager::RemoveClearDepthStencilJob(const SGGuid& guid)
+{
+	clearDepthStencilJobs.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11PipelineManager::CreatePipeline(const SGGuid & guid, const SGPipeline & pipeline)
 {
-	pipelines.lock();
-	pipelines[guid] = pipeline;
-	pipelines.unlock();
+	pipelines.AddElement(guid, pipeline);
 	return SGResult::OK;
+}
+
+void SG::D3D11PipelineManager::RemovePipeline(const SGGuid& guid)
+{
+	pipelines.RemoveElement(guid);
+}
+
+void SG::D3D11PipelineManager::FinishFrame()
+{
+	renderJobs.FinishFrame();
+	computeJobs.FinishFrame();
+	clearRenderTargetJobs.FinishFrame();
+	clearDepthStencilJobs.FinishFrame();
+	pipelines.FinishFrame();
+}
+
+void SG::D3D11PipelineManager::SwapFrame()
+{
+	renderJobs.UpdateActive();
+	computeJobs.UpdateActive();
+	clearRenderTargetJobs.UpdateActive();
+	clearDepthStencilJobs.UpdateActive();
+	pipelines.UpdateActive();
 }
 
 SG::SGRenderJob SG::D3D11PipelineManager::GetRenderJob(const SGGuid & guid)
 {
 	if constexpr (DEBUG_VERSION)
 	{
-		if(renderJobs.find(guid) == renderJobs.end())
+		if(!renderJobs.HasElement(guid))
 			throw std::runtime_error("Error fetching render job, guid does not exist");
 	}
 
@@ -67,7 +93,7 @@ SG::SGComputeJob SG::D3D11PipelineManager::GetComputeJob(const SGGuid & guid)
 {
 	if constexpr (DEBUG_VERSION)
 	{
-		if (computeJobs.find(guid) == computeJobs.end())
+		if (!computeJobs.HasElement(guid))
 			throw std::runtime_error("Error fetching compute job, guid does not exist");
 	}
 
@@ -78,7 +104,7 @@ SG::SGClearRenderTargetJob SG::D3D11PipelineManager::GetClearRenderTargetJob(con
 {
 	if constexpr (DEBUG_VERSION)
 	{
-		if (clearRenderTargetJobs.find(guid) == clearRenderTargetJobs.end())
+		if (!clearRenderTargetJobs.HasElement(guid))
 			throw std::runtime_error("Error fetching clear rendertarget job, guid does not exist");
 	}
 
@@ -89,7 +115,7 @@ SG::SGClearDepthStencilJob SG::D3D11PipelineManager::GetClearDepthStencilJob(con
 {
 	if constexpr (DEBUG_VERSION)
 	{
-		if (clearDepthStencilJobs.find(guid) == clearDepthStencilJobs.end())
+		if (!clearDepthStencilJobs.HasElement(guid))
 			throw std::runtime_error("Error fetching clear rendertarget job, guid does not exist");
 	}
 
@@ -100,7 +126,7 @@ SG::SGPipeline SG::D3D11PipelineManager::GetPipeline(const SGGuid & guid)
 {
 	if constexpr (DEBUG_VERSION)
 	{
-		if (pipelines.find(guid) == pipelines.end())
+		if (!pipelines.HasElement(guid))
 			throw std::runtime_error("Error fetching clear rendertarget job, guid does not exist");
 	}
 

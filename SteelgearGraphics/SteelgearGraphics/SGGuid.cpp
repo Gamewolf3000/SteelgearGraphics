@@ -26,10 +26,6 @@ namespace SG
 		guids.unlock();
 	}
 
-	SGGuid::~SGGuid()
-	{
-	}
-
 	bool SGGuid::operator==(const SGGuid & other) const
 	{
 		return myID == other.myID;

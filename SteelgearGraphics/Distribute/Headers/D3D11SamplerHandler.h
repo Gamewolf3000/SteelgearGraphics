@@ -5,7 +5,7 @@
 #include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
-#include "LockableUnorderedMap.h"
+#include "D3D11SamplerData.h"
 
 
 namespace SG
@@ -64,10 +64,11 @@ namespace SG
 	public:
 
 		D3D11SamplerHandler(ID3D11Device* device);
-		~D3D11SamplerHandler();
+		~D3D11SamplerHandler() = default;
 
 		SGResult CreateSampler(const SGGuid& guid, Filter filter, TextureAdressMode adressU, TextureAdressMode adressV, TextureAdressMode adressW, 
 			FLOAT mipLODBias, UINT maxAnisotropy, ComparisonFunction comparisonFunc, FLOAT borderColor[4], FLOAT minLOD, FLOAT maxLOD);
+		void RemoveSampler(const SGGuid& guid);
 
 		SGResult BindSamplerToEntity(const SGGraphicalEntityID& entity, const SGGuid& samplerGuid, const SGGuid& bindGuid);
 		SGResult BindSamplerToGroup(const SGGuid& group, const SGGuid& samplerGuid, const SGGuid& bindGuid);
@@ -76,14 +77,12 @@ namespace SG
 
 		friend class D3D11RenderEngine;
 
-		struct D3D11SamplerData
-		{
-			ID3D11SamplerState* sampler = nullptr;
-		};
-
-		LockableUnorderedMap<SGGuid, D3D11SamplerData> samplers;
+		FrameMap<SGGuid, D3D11SamplerData> samplers;
 
 		ID3D11Device* device;
+
+		void FinishFrame() override;
+		void SwapFrame() override;
 
 		D3D11_FILTER TranslateFilter(const Filter& filter);
 		D3D11_TEXTURE_ADDRESS_MODE TranslateAdressMode(const TextureAdressMode& adressMode);

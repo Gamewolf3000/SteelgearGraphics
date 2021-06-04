@@ -5,25 +5,6 @@ SG::D3D11StateHandler::D3D11StateHandler(ID3D11Device * device)
 	this->device = device;
 }
 
-SG::D3D11StateHandler::~D3D11StateHandler()
-{
-	for (auto& state : states)
-	{
-		switch (state.second.type)
-		{
-		case StateType::RASTERIZER:
-			ReleaseCOM(state.second.state.rasterizer);
-			break;
-		case StateType::DEPTH_STENCIL:
-			ReleaseCOM(state.second.state.depthStencil);
-			break;
-		case StateType::BLEND:
-			ReleaseCOM(state.second.state.blend);
-			break;
-		}
-	}
-}
-
 SG::SGResult SG::D3D11StateHandler::CreateRasterizerState(const SGGuid & guid, FillMode fill, CullMode cull, BOOL frontCounterClockwise, INT depthBias, FLOAT depthBiasClamp, FLOAT slopeScaledDepthBias, BOOL depthClipEnable, BOOL scissorEnable, BOOL multisampleEnable, BOOL antialiasedEnable)
 {
 	D3D11_RASTERIZER_DESC desc;
@@ -58,11 +39,14 @@ SG::SGResult SG::D3D11StateHandler::CreateRasterizerState(const SGGuid & guid, F
 	if (FAILED(device->CreateRasterizerState(&desc, &toStore.state.rasterizer)))
 		return SGResult::FAIL;
 
-	states.lock();
-	states[guid] = toStore;
-	states.unlock();
+	states.AddElement(guid, std::move(toStore));
 
 	return SGResult::OK;
+}
+
+void SG::D3D11StateHandler::RemoveState(const SGGuid& guid)
+{
+	states.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11StateHandler::CreateViewport(const SGGuid & guid, FLOAT topLeftX, FLOAT topLeftY, FLOAT width, FLOAT height, FLOAT minDepth, FLOAT maxDepth)
@@ -76,252 +60,103 @@ SG::SGResult SG::D3D11StateHandler::CreateViewport(const SGGuid & guid, FLOAT to
 	toStore.viewport.MinDepth = minDepth;
 	toStore.viewport.MaxDepth = maxDepth;
 
-	viewports.lock();
-	viewports[guid] = toStore;
-	viewports.unlock();
+	viewports.AddElement(guid, std::move(toStore));
 
 	return SGResult::OK;
+}
+
+void SG::D3D11StateHandler::RemoveViewport(const SGGuid& guid)
+{
+	viewports.RemoveElement(guid);
+}
+
+void SG::D3D11StateHandler::RemoveStateData(const SGGuid& guid)
+{
+	setData.RemoveElement(guid);
 }
 
 SG::SGResult SG::D3D11StateHandler::BindStateToEntity(const SGGraphicalEntityID & entity, const SGGuid & stateGuid, const SGGuid & bindGuid)
 {
-	this->UpdateEntity(entity, stateGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		states.lock();
-		if (states.find(stateGuid) == states.end())
-		{
-			states.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		states.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToEntity(entity, stateGuid, bindGuid, states);
 }
 
 SG::SGResult SG::D3D11StateHandler::BindStateToGroup(const SGGuid & group, const SGGuid & stateGuid, const SGGuid & bindGuid)
 {
-	UpdateGroup(group, stateGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		states.lock();
-		if (states.find(stateGuid) == states.end())
-		{
-			states.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		states.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToGroup(group, stateGuid, bindGuid, states);
 }
 
 SG::SGResult SG::D3D11StateHandler::BindViewportToEntity(const SGGraphicalEntityID & entity, const SGGuid & viewportGuid, const SGGuid & bindGuid)
 {
-	this->UpdateEntity(entity, viewportGuid, bindGuid);
-
-	if constexpr (DEBUG_VERSION)
-	{
-		viewports.lock();
-		if (viewports.find(viewportGuid) == viewports.end())
-		{
-			viewports.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		viewports.unlock();
-	}
-
-	return SGResult::OK;
+	return SG::SGGraphicsHandler::BindElementToEntity(entity, viewportGuid, bindGuid, viewports);
 }
 
 SG::SGResult SG::D3D11StateHandler::BindViewportToGroup(const SGGuid & group, const SGGuid & viewportGuid, const SGGuid & bindGuid)
 {
-	UpdateGroup(group, viewportGuid, bindGuid);
+	return SG::SGGraphicsHandler::BindElementToGroup(group, viewportGuid, bindGuid, viewports);
+}
 
-	if constexpr (DEBUG_VERSION)
-	{
-		viewports.lock();
-		if (viewports.find(viewportGuid) == viewports.end())
-		{
-			viewports.unlock();
-			return SGResult::GUID_MISSING;
-		}
-		viewports.unlock();
-	}
+void SG::D3D11StateHandler::FinishFrame()
+{
+	SG::SGGraphicsHandler::FinishFrame();
 
-	return SGResult::OK;
+	states.FinishFrame();
+	setData.FinishFrame();
+	viewports.FinishFrame();
+}
+
+void SG::D3D11StateHandler::SwapFrame()
+{
+	SG::SGGraphicsHandler::SwapFrame();
+
+	states.UpdateActive();
+	setData.UpdateActive();
+	viewports.UpdateActive();
 }
 
 ID3D11RasterizerState * SG::D3D11StateHandler::GetRazterizerState(const SGGuid & guid)
 {
-	states.lock();
-
-	if constexpr (DEBUG_VERSION)
+	auto stateTypeCheck = [](const D3D11StateData& element)
 	{
-		if (states.find(guid) == states.end())
-		{
-			states.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, guid does not exist");
-		}
-
-		if (states[guid].type != StateType::RASTERIZER)
-		{
-			states.unlock();
+		if (element.type != StateType::RASTERIZER)
 			throw std::runtime_error("Error fetching rasterizer state, guid does not match a rasterizer state");
-		}
-	}
+	};
 
-	auto toReturn = states[guid].state.rasterizer;
-	states.unlock();
-
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGlobalElement(guid, states, "rasterizer state", { stateTypeCheck }).state.rasterizer;
 }
 
 ID3D11RasterizerState * SG::D3D11StateHandler::GetRazterizerState(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	states.lock();
-	groupData.lock();
-
-	if constexpr (DEBUG_VERSION)
+	auto stateTypeCheck = [](const D3D11StateData& element)
 	{
-		if (groupData.find(groupGuid) == groupData.end())
-		{
-			states.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, group does not exist");
-		}
-
-		if (groupData[groupGuid].find(guid) == groupData[groupGuid].end())
-		{
-			states.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, group does not have the guid");
-		}
-
-		if (states.find(groupData[groupGuid][guid].GetActive()) == states.end())
-		{
-			states.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, guid does not exist");
-		}
-
-		if (states[groupData[groupGuid][guid].GetActive()].type != StateType::RASTERIZER)
-		{
-			states.unlock();
-			groupData.unlock();
+		if (element.type != StateType::RASTERIZER)
 			throw std::runtime_error("Error fetching rasterizer state, guid does not match a rasterizer state");
-		}
-	}
+	};
 
-	auto toReturn = states[groupData[groupGuid][guid].GetActive()].state.rasterizer;
-	groupData.unlock();
-	states.unlock();
-
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, states, "rasterizer state", { stateTypeCheck }).state.rasterizer;
 }
 
 ID3D11RasterizerState * SG::D3D11StateHandler::GetRazterizerState(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	states.lock();
-	entityData.lock();
-
-	if constexpr (DEBUG_VERSION)
+	auto stateTypeCheck = [](const D3D11StateData& element)
 	{
-		if (entityData.find(entity) == entityData.end())
-		{
-			states.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, entity does not exist");
-		}
+		if (element.type != StateType::RASTERIZER)
+			throw std::runtime_error("Error fetching rasterizer state, guid does not match a rasterizer state");
+	};
 
-		if (entityData[entity].find(guid) == entityData[entity].end())
-		{
-			states.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, entity does not have the guid");
-		}
-
-		if (states.find(entityData[entity][guid].GetActive()) == states.end())
-		{
-			states.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, guid does not exist");
-		}
-
-		if (states[entityData[entity][guid].GetActive()].type != StateType::RASTERIZER)
-		{
-			states.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error fetching rasterizer state, guid does not match an rasterizer state");
-		}
-	}
-
-	auto toReturn = states[entityData[entity][guid].GetActive()].state.rasterizer;
-	entityData.unlock();
-	states.unlock();
-
-	return toReturn;
+	return SG::SGGraphicsHandler::GetEntityElement(guid, entity, states, "rasterizer state", { stateTypeCheck }).state.rasterizer;
 }
 
 const D3D11_VIEWPORT& SG::D3D11StateHandler::GetViewport(const SGGuid & guid)
 {
-	viewports.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (viewports.find(guid) == viewports.end())
-		{
-			viewports.unlock();
-			throw std::runtime_error("Error, missing guid when fetching viewport");
-		}
-	}
-
-	const D3D11_VIEWPORT& toReturn = viewports[guid].viewport;
-	viewports.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGlobalElement(guid, viewports, "viewport").viewport;
 }
 
 const D3D11_VIEWPORT& SG::D3D11StateHandler::GetViewport(const SGGuid & guid, const SGGuid & groupGuid)
 {
-	groupData.lock();
-	viewports.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (viewports.find(groupData[groupGuid][guid].GetActive()) == viewports.end())
-		{
-			viewports.unlock();
-			groupData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching viewport");
-		}
-	}
-
-	const D3D11_VIEWPORT& toReturn = viewports[groupData[groupGuid][guid].GetActive()].viewport;
-	viewports.unlock();
-	groupData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetGroupElement(guid, groupGuid, viewports, "viewport").viewport;
 }
 
 const D3D11_VIEWPORT& SG::D3D11StateHandler::GetViewport(const SGGuid & guid, const SGGraphicalEntityID & entity)
 {
-	entityData.lock();
-	viewports.lock();
-
-	if constexpr (DEBUG_VERSION)
-	{
-		if (viewports.find(entityData[entity][guid].GetActive()) == viewports.end())
-		{
-			viewports.unlock();
-			entityData.unlock();
-			throw std::runtime_error("Error, missing guid when fetching viewport");
-		}
-	}
-
-	const D3D11_VIEWPORT& toReturn = viewports[entityData[entity][guid].GetActive()].viewport;
-	viewports.unlock();
-	entityData.unlock();
-	return toReturn;
+	return SG::SGGraphicsHandler::GetEntityElement(guid, entity, viewports, "viewport").viewport;
 }

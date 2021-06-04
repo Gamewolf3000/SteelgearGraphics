@@ -92,8 +92,8 @@ namespace SG
 		void CreateDeviceAndContext(const SGRenderSettings& settings);
 		void CreateSwapChain(const SGRenderSettings& settings);
 
-		void SwapUpdateBuffer() override;
-		void SwapToWorkWithBuffer() override;
+		void FinishFrame() override;
+		void SwapFrame() override;
 		void ExecuteJobs(const std::vector<SGGraphicsJob>& jobs) override;
 
 		void HandlePipelineJobs(const std::vector<SGGraphicsJob>& jobs, int startPos, int endPos, ID3D11DeviceContext* context);

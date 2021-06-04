@@ -3,7 +3,9 @@
 #include <d3d11_4.h>
 #include <utility>
 
-#include "SGGraphicsHandler.h"
+#include "SGRenderEngine.h"
+#include "SGResult.h"
+#include "FrameMap.h"
 
 #include "D3D11CommonTypes.h"
 
@@ -63,7 +65,43 @@ namespace SG
 		LINELIST,
 		LINESTRIP,
 		TRIANGLELIST,
-		TRIANGLESTRIP
+		TRIANGLESTRIP,
+		LINELIST_ADJ,
+		LINESTRIP_ADJ,
+		TRIANGLELIST_ADJ,
+		TRIANGLESTRIP_ADJ,
+		CONTROL_POINT_PATCHLIST_1,
+		CONTROL_POINT_PATCHLIST_2,
+		CONTROL_POINT_PATCHLIST_3,
+		CONTROL_POINT_PATCHLIST_4,
+		CONTROL_POINT_PATCHLIST_5,
+		CONTROL_POINT_PATCHLIST_6,
+		CONTROL_POINT_PATCHLIST_7,
+		CONTROL_POINT_PATCHLIST_8,
+		CONTROL_POINT_PATCHLIST_9,
+		CONTROL_POINT_PATCHLIST_10,
+		CONTROL_POINT_PATCHLIST_11,
+		CONTROL_POINT_PATCHLIST_12,
+		CONTROL_POINT_PATCHLIST_13,
+		CONTROL_POINT_PATCHLIST_14,
+		CONTROL_POINT_PATCHLIST_15,
+		CONTROL_POINT_PATCHLIST_16,
+		CONTROL_POINT_PATCHLIST_17,
+		CONTROL_POINT_PATCHLIST_18,
+		CONTROL_POINT_PATCHLIST_19,
+		CONTROL_POINT_PATCHLIST_20,
+		CONTROL_POINT_PATCHLIST_21,
+		CONTROL_POINT_PATCHLIST_22,
+		CONTROL_POINT_PATCHLIST_23,
+		CONTROL_POINT_PATCHLIST_24,
+		CONTROL_POINT_PATCHLIST_25,
+		CONTROL_POINT_PATCHLIST_26,
+		CONTROL_POINT_PATCHLIST_27,
+		CONTROL_POINT_PATCHLIST_28,
+		CONTROL_POINT_PATCHLIST_29,
+		CONTROL_POINT_PATCHLIST_30,
+		CONTROL_POINT_PATCHLIST_31,
+		CONTROL_POINT_PATCHLIST_32
 	};
 
 	struct SGRenderJob
@@ -131,27 +169,37 @@ namespace SG
 	{
 	public:
 		D3D11PipelineManager(ID3D11Device* device);
-		~D3D11PipelineManager();
+		~D3D11PipelineManager() = default;
 
 		SGResult CreateRenderJob(const SGGuid& guid, const SGRenderJob& job);
+		void RemoveRenderJob(const SGGuid& guid);
+
 		SGResult CreateComputeJob(const SGGuid& guid, const SGComputeJob& job);
+		void RemoveComputeJob(const SGGuid& guid);
+
 		SGResult CreateClearRenderTargetJob(const SGGuid& guid, const SGClearRenderTargetJob& job);
+		void RemoveClearRenderTargetJob(const SGGuid& guid);
+
 		SGResult CreateClearDepthStencilJob(const SGGuid& guid, const SGClearDepthStencilJob& job);
+		void RemoveClearDepthStencilJob(const SGGuid& guid);
+
 		SGResult CreatePipeline(const SGGuid& guid, const SGPipeline& pipeline);
+		void RemovePipeline(const SGGuid& guid);
 
 	private:
 
 		friend class D3D11RenderEngine;
 
-
-
-		LockableUnorderedMap<SGGuid, SGRenderJob> renderJobs;
-		LockableUnorderedMap<SGGuid, SGComputeJob> computeJobs;
-		LockableUnorderedMap<SGGuid, SGClearRenderTargetJob> clearRenderTargetJobs;
-		LockableUnorderedMap<SGGuid, SGClearDepthStencilJob> clearDepthStencilJobs;
-		LockableUnorderedMap<SGGuid, SGPipeline> pipelines;
+		FrameMap<SGGuid, SGRenderJob> renderJobs;
+		FrameMap<SGGuid, SGComputeJob> computeJobs;
+		FrameMap<SGGuid, SGClearRenderTargetJob> clearRenderTargetJobs;
+		FrameMap<SGGuid, SGClearDepthStencilJob> clearDepthStencilJobs;
+		FrameMap<SGGuid, SGPipeline> pipelines;
 
 		ID3D11Device* device;
+
+		void FinishFrame();
+		void SwapFrame();
 
 		SGRenderJob GetRenderJob(const SGGuid& guid);
 		SGComputeJob GetComputeJob(const SGGuid& guid);

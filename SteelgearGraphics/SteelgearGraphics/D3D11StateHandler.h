@@ -6,7 +6,9 @@
 #include "SGGraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
-#include "LockableUnorderedMap.h"
+#include "D3D11StateData.h"
+#include "D3D11SetData.h"
+#include "D3D11ViewportData.h"
 
 
 namespace SG
@@ -89,23 +91,25 @@ namespace SG
 	public:
 
 		D3D11StateHandler(ID3D11Device* device);
-		~D3D11StateHandler();
+		~D3D11StateHandler() = default;
 
 		SGResult CreateRasterizerState(const SGGuid& guid, FillMode fill, CullMode cull, BOOL frontCounterClockwise, INT depthBias, FLOAT depthBiasClamp,
 										FLOAT slopeScaledDepthBias, BOOL depthClipEnable, BOOL scissorEnable, BOOL multisampleEnable, BOOL antialiasedEnable);
+		void RemoveRasterizerState(const SGGuid& guid);
 
 		SGResult CreateDepthStencilState(const SGGuid& guid, BOOL depthEnable, DepthWriteMask mask, ComparisonFunction depthFunc, BOOL stencilEnable, UINT8 stencilReadMask,
 											UINT8 stencilWriteMask, DepthStencilOp frontFaceStencilFailOp, DepthStencilOp frontFaceStencilDepthFailOp,
 											DepthStencilOp frontFaceStencilPassOp, ComparisonFunction frontFaceStencilFunc, DepthStencilOp backFaceStencilFailOp,
 											DepthStencilOp backFaceStencilDepthFailOp, DepthStencilOp backFaceStencilPassOp, ComparisonFunction backFaceStencilFunc);
-
 		SGResult CreateBlendState(const SGGuid& guid, BOOL alphaToCoverageEnable, BOOL independentBlendEnable, std::vector<RenderTargetBlending> renderTargets);
+		void RemoveState(const SGGuid& guid);
 
 		SGResult CreateViewport(const SGGuid& guid, FLOAT topLeftX, FLOAT topLeftY, FLOAT width, FLOAT height, FLOAT minDepth, FLOAT maxDepth);
+		void RemoveViewport(const SGGuid& guid);
 
 		SGResult CreateDepthStencilData(const SGGuid& guid, UINT stencilRef);
-
 		SGResult CreateBlendData(const SGGuid& guid, const FLOAT blendFactor[4], UINT sampleMask);
+		void RemoveStateData(const SGGuid& guid);
 
 		SGResult BindStateToEntity(const SGGraphicalEntityID& entity, const SGGuid& stateGuid, const SGGuid& bindGuid);
 		SGResult BindStateToGroup(const SGGuid& group, const SGGuid& stateGuid, const SGGuid& bindGuid);
@@ -118,55 +122,14 @@ namespace SG
 
 		friend class D3D11RenderEngine;
 
-		enum class StateType
-		{
-			RASTERIZER,
-			DEPTH_STENCIL,
-			BLEND
-		};
-
-		struct D3D11StateData
-		{
-			StateType type;
-			union
-			{
-				ID3D11RasterizerState* rasterizer;
-				ID3D11DepthStencilState* depthStencil;
-				ID3D11BlendState* blend;
-			} state;
-
-		};
-
-		struct DepthStencilSetData
-		{
-			UINT stencilRef;
-		};
-
-		struct BlendSetData
-		{
-			const FLOAT blendFactor[4];
-			UINT sampleMask;
-		};
-
-		struct D3D11SetData
-		{
-			union
-			{
-				DepthStencilSetData depthStencil;
-				BlendSetData blend;
-			};
-		};
-
-		struct D3D11ViewportData
-		{
-			D3D11_VIEWPORT viewport;
-		};
-
-		LockableUnorderedMap<SGGuid, D3D11StateData> states;
-		LockableUnorderedMap<SGGuid, D3D11SetData> setData;
-		LockableUnorderedMap<SGGuid, D3D11ViewportData> viewports;
+		FrameMap<SGGuid, D3D11StateData> states;
+		FrameMap<SGGuid, D3D11SetData> setData;
+		FrameMap<SGGuid, D3D11ViewportData> viewports;
 
 		ID3D11Device* device;
+
+		void FinishFrame() override;
+		void SwapFrame() override;
 
 		ID3D11RasterizerState* GetRazterizerState(const SGGuid& guid);
 		ID3D11RasterizerState* GetRazterizerState(const SGGuid& guid, const SGGuid& groupGuid);

@@ -19,13 +19,13 @@ void SG::SGRenderEngine::Render(const std::vector<SGGraphicsJob>& jobs)
 	dataIndexMutex.lock();
 	pipelineJobs[toUpdate] = jobs;
 	std::swap(toUpdate, toUseNext);
-	SwapUpdateBuffer();
+	FinishFrame();
 	dataIndexMutex.unlock();
 
 	if (!threadedRenderLoop)
 	{
 		std::swap(toWorkWith, toUseNext);
-		SwapToWorkWithBuffer();
+		SwapFrame();
 		ExecuteJobs(pipelineJobs[toWorkWith]);
 	}
 }
@@ -62,7 +62,7 @@ void SG::SGRenderEngine::RenderThreadFunction()
 		dataIndexMutex.lock();
 		lastIndex = toWorkWith;
 		std::swap(toWorkWith, toUseNext);
-		SwapToWorkWithBuffer();
+		SwapFrame();
 		dataIndexMutex.unlock();
 
 		ExecuteJobs(pipelineJobs[toWorkWith]);

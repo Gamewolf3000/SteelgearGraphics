@@ -15,6 +15,7 @@ private:
 
 public:
 	TripleBufferedData() = default;
+	TripleBufferedData(TripleBufferedData<T>&& other);
 	TripleBufferedData(const T& t);
 	TripleBufferedData(const T& t1, const T& t2, const T& t3);
 	TripleBufferedData(T&& t1, T&& t2, T&& t3);
@@ -33,6 +34,19 @@ public:
 	void SwitchUpdateBuffer();
 
 };
+
+template<class T>
+inline TripleBufferedData<T>::TripleBufferedData(TripleBufferedData<T>&& other)
+{
+	this->currentlyActive = other.currentlyActive;
+	this->lastUpdated = other.lastUpdated;
+	this->nextToUpdate = other.nextToUpdate;
+	this->updatedInternal = other.updatedInternal;
+	this->updatedReturn = other.updatedReturn;
+
+	for (int i = 0; i < 3; ++i)
+		this->storedData[i] = std::move(other.storedData[i]);
+}
 
 template<class T>
 inline TripleBufferedData<T>::TripleBufferedData(const T & t) : storedData{ t, T(), T()}
@@ -89,10 +103,6 @@ inline bool TripleBufferedData<T>::Updated()
 template<class T>
 inline void TripleBufferedData<T>::MarkAsNotUpdated()
 {
-	// If an update has been made after last switch we want to consider us updated externally as well so that an update is not missed
-	//updatedReturn = updatedInternal;
-	//updatedInternal = false;
-
 	updatedReturn = false;
 }
 
@@ -148,6 +158,5 @@ inline void TripleBufferedData<T>::SwitchUpdateBuffer()
 	nextToUpdate = 3 - currentlyActive - nextToUpdate;
 
 	// This should be safe, and protect from problems with multiple switches on same update
-	updatedInternal = false; 
-	updatedReturn = true;
+	updatedInternal = false;
 }

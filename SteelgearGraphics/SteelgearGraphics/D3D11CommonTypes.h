@@ -1,12 +1,13 @@
 #pragma once
 
-#include "SGGuid.h"
-
 #include <mutex>
 #include <unordered_map>
 
 #include <d3d11_4.h>
 #include <dxgi1_6.h>
+
+#include "SGGuid.h"
+#include "D3D11ResourceViewData.h"
 
 namespace SG
 {
@@ -20,27 +21,6 @@ namespace SG
 	struct PipelineComponent
 	{
 		Association source;
-		SGGuid resourceGuid;
-	};
-
-	enum class ResourceViewType
-	{
-		SRV,
-		UAV,
-		DSV,
-		RTV
-	};
-
-	struct D3D11ResourceViewData
-	{
-		ResourceViewType type;
-		union
-		{
-			ID3D11ShaderResourceView* srv;
-			ID3D11UnorderedAccessView* uav;
-			ID3D11RenderTargetView* rtv;
-			ID3D11DepthStencilView* dsv;
-		} view;
 		SGGuid resourceGuid;
 	};
 

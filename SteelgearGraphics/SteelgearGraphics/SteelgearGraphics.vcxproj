@@ -163,13 +163,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="D3D11GraphicsHandler.h" />
+    <ClInclude Include="D3D11InputLayoutData.h" />
+    <ClInclude Include="D3D11SamplerData.h" />
+    <ClInclude Include="D3D11SetData.h" />
+    <ClInclude Include="D3D11ShaderData.h" />
+    <ClInclude Include="D3D11StateData.h" />
+    <ClInclude Include="D3D11TextureData.h" />
+    <ClInclude Include="D3D11ViewportData.h" />
+    <ClInclude Include="FrameMap.h" />
+    <ClInclude Include="D3D11BufferData.h" />
     <ClInclude Include="D3D11BufferHandler.h" />
     <ClInclude Include="D3D11CommonTypes.h" />
     <ClInclude Include="D3D11DrawCallHandler.h" />
+    <ClInclude Include="D3D11ResourceViewData.h" />
     <ClInclude Include="D3D11StateHandler.h" />
     <ClInclude Include="D3D11SamplerHandler.h" />
     <ClInclude Include="D3D11ShaderManager.h" />
     <ClInclude Include="D3D11TextureHandler.h" />
+    <ClInclude Include="LayeredFrameMap.h" />
     <ClInclude Include="LockableUnorderedMap.h" />
     <ClInclude Include="SGGraphicsHandler.h" />
     <ClInclude Include="SGResult.h" />
@@ -182,14 +194,22 @@
     <ClInclude Include="TripleBufferedData.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="D3D11BufferData.cpp" />
     <ClCompile Include="D3D11BufferHandler.cpp" />
     <ClCompile Include="D3D11CommonTypes.cpp" />
     <ClCompile Include="D3D11DrawCallHandler.cpp" />
+    <ClCompile Include="D3D11GraphicsHandler.cpp" />
+    <ClCompile Include="D3D11InputLayoutData.cpp" />
     <ClCompile Include="D3D11PipelineManager.cpp" />
     <ClCompile Include="D3D11RenderEngine.cpp" />
+    <ClCompile Include="D3D11ResourceViewData.cpp" />
+    <ClCompile Include="D3D11SamplerData.cpp" />
     <ClCompile Include="D3D11SamplerHandler.cpp" />
+    <ClCompile Include="D3D11ShaderData.cpp" />
     <ClCompile Include="D3D11ShaderManager.cpp" />
+    <ClCompile Include="D3D11StateData.cpp" />
     <ClCompile Include="D3D11StateHandler.cpp" />
+    <ClCompile Include="D3D11TextureData.cpp" />
     <ClCompile Include="D3D11TextureHandler.cpp" />
     <ClCompile Include="SGGraphicsHandler.cpp" />
     <ClCompile Include="SGGuid.cpp" />

@@ -1,11 +1,13 @@
 #pragma once
 
+#include <optional>
+
 #include <d3d11_4.h>
 
-#include "SGGraphicsHandler.h"
+#include "D3D11GraphicsHandler.h"
 
 #include "D3D11CommonTypes.h"
-#include "TripleBufferedData.h"
+#include "D3D11TextureData.h"
 
 namespace SG
 {
@@ -17,7 +19,6 @@ namespace SG
 		DEPTH_STENCIL,
 		UNORDERED_ACCESS
 	};
-	
 
 	struct SGTextureData
 	{
@@ -30,37 +31,78 @@ namespace SG
 		bool generateMips;
 		bool resourceClamp;
 		std::vector<void*> data;
-		UINT bytesPerRow;
-		UINT rowsPerSlice;
+		//UINT bytesPerRow;
+		//UINT rowsPerSlice;
 	};
 
-	class D3D11TextureHandler : public SGGraphicsHandler
+	class D3D11TextureHandler : public D3D11GraphicsHandler
 	{
 	public:
 
 
 		D3D11TextureHandler(ID3D11Device* device);
-		~D3D11TextureHandler();
+		~D3D11TextureHandler() = default;
 
 		SGResult CreateTexture1D(const SGGuid& guid, const SGTextureData& generalSettings, UINT width, UINT arraySize);
 		SGResult CreateTexture2D(const SGGuid& guid, const SGTextureData& generalSettings, UINT width, UINT height, UINT arraySize, const DXGI_SAMPLE_DESC& sampleDesc, bool texturecube);
 		SGResult CreateTexture3D(const SGGuid& guid, const SGTextureData& generalSettings, UINT width, UINT height, UINT depth);
+		void RemoveTexture(const SGGuid& guid);
 
-		SGResult CreateSRV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels);
-		SGResult CreateSRV(const SGGuid& guid, const SGGuid& textureGuid);
-		SGResult CreateSRVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mostDetailedMip, UINT mipLevels, UINT firstArraySlice, UINT arraySize);
+		SGResult CreateSRV(const SGGuid& guid, const SGGuid& textureGuid,
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<UINT> mostDetailedMip = std::nullopt,
+			std::optional<UINT> mipLevels = std::nullopt);
+		SGResult CreateSRVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, 
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<UINT> mostDetailedMip = std::nullopt,
+			std::optional<UINT> mipLevels = std::nullopt,
+			std::optional<UINT> firstArraySlice = std::nullopt,
+			std::optional<UINT> arraySize = std::nullopt);
 
-		SGResult CreateUAV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice = 0, UINT wSize = 0);
-		SGResult CreateUAV(const SGGuid& guid, const SGGuid& textureGuid);
-		SGResult CreateUAVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice = 0, UINT arraySize = 0);
+		SGResult CreateUAV(const SGGuid& guid, const SGGuid& textureGuid,
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<UINT> mipSlice = std::nullopt,
+			std::optional<UINT> firstWSlice = std::nullopt,
+			std::optional<UINT> wSize = std::nullopt);
+		SGResult CreateUAVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, 
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<UINT> mipSlice = std::nullopt,
+			std::optional<UINT> firstArraySlice = std::nullopt,
+			std::optional<UINT> arraySize = std::nullopt);
 
-		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstWSlice = 0, UINT wSize = 0);
-		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid);
-		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
+		SGResult CreateRTV(const SGGuid& guid, const SGGuid& textureGuid, 
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<UINT> mipSlice = std::nullopt,
+			std::optional<UINT> firstWSlice = std::nullopt,
+			std::optional<UINT> wSize = std::nullopt);
+		SGResult CreateRTVTextureArray(const SGGuid& guid, const SGGuid& textureGuid,
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<UINT> mipSlice = std::nullopt,
+			std::optional<UINT> firstArraySlice = std::nullopt,
+			std::optional<UINT> arraySize = std::nullopt);
 
-		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice);
-		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid);
-		SGResult CreateDSVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, DXGI_FORMAT format, bool readOnlyDepth, bool readOnlyStencil, UINT mipSlice, UINT firstArraySlice, UINT arraySize);
+		SGResult CreateDSV(const SGGuid& guid, const SGGuid& textureGuid, 
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<bool> readOnlyDepth = std::nullopt,
+			std::optional<bool> readOnlyStencil = std::nullopt,
+			std::optional<UINT> mipSlice = std::nullopt);
+		SGResult CreateDSVTextureArray(const SGGuid& guid, const SGGuid& textureGuid, 
+			std::optional<DXGI_FORMAT> format = std::nullopt,
+			std::optional<TextureType> viewDimension = std::nullopt,
+			std::optional<bool> readOnlyDepth = std::nullopt,
+			std::optional<bool> readOnlyStencil = std::nullopt,
+			std::optional<UINT> mipSlice = std::nullopt,
+			std::optional<UINT> firstArraySlice = std::nullopt,
+			std::optional<UINT> arraySize = std::nullopt);
+
+		void RemoveView(const SGGuid& guid);
 
 		SGResult BindViewToEntity(const SGGraphicalEntityID& entity, const SGGuid& viewGuid, const SGGuid& bindGuid);
 		SGResult BindViewToGroup(const SGGuid& group, const SGGuid& viewGuid, const SGGuid& bindGuid);
@@ -69,35 +111,21 @@ namespace SG
 
 		friend class D3D11RenderEngine;
 
-		enum class TextureType
+		union TextureDesc
 		{
-			TEXTURE_1D,
-			TEXTURE_ARRAY_1D,
-			TEXTURE_2D,
-			TEXTURE_ARRAY_2D,
-			TEXTURE_MULTISAMPLED_2D,
-			TEXTURE_ARRAY_MULTISAMPLED_2D,
-			TEXTURE_3D,
-			TEXTURE_CUBE,
-			TEXTURE_ARRAY_CUBE
-		};
+			D3D11_TEXTURE1D_DESC desc1D;
+			D3D11_TEXTURE2D_DESC desc2D;
+			D3D11_TEXTURE3D_DESC desc3D;
 
-		struct D3D11TextureData
-		{
-			TextureType type;
-			bool updated = false;
-			union
+			TextureDesc& operator=(const TextureDesc& other)
 			{
-				ID3D11Texture1D* texture1D;
-				ID3D11Texture2D* texture2D;
-				ID3D11Texture3D* texture3D;
-			} texture;
-			TripleBufferedData<UpdateData> updatedData;
+				memcpy(this, &other, sizeof(TextureDesc));
+				return *this;
+			}
 		};
 
-
-		LockableUnorderedMap<SGGuid, D3D11TextureData> textures;
-		LockableUnorderedMap<SGGuid, D3D11ResourceViewData> views;
+		FrameMap<SGGuid, D3D11TextureData> textures;
+		FrameMap<SGGuid, D3D11ResourceViewData> views;
 
 		std::vector<SGGuid> updatedFrameBuffer;
 		std::vector<SGGuid> updatedTotalBuffer;
@@ -111,12 +139,12 @@ namespace SG
 		D3D11_RTV_DIMENSION GetRTVDimension(TextureType type);
 		D3D11_DSV_DIMENSION GetDSVDimension(TextureType type);
 
-
+		TextureDesc GetDesc(const D3D11TextureData& storedData);
 
 		void AddTexture2D(const SGGuid& guid, ID3D11Texture2D* texture);
 
-		void SwapUpdateBuffer();
-		void SwapToWorkWithBuffer();
+		void FinishFrame() override;
+		void SwapFrame() override;
 
 		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid);
 		ID3D11ShaderResourceView* GetSRV(const SGGuid& guid, const SGGuid& groupGuid);
